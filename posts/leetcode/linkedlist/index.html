@@ -1,0 +1,112 @@
+<!doctype html><html><head lang=zh><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><title>「LeetCode」链表题解 - xiaoheiAh&#39;s blog</title><link rel=icon type=image/png href=https://blog.xiaohei.im/favicon.ico><meta name=viewport content="width=device-width,initial-scale=1"><meta property=og:title content=「LeetCode」链表题解><meta property=og:description content="leetcode | linkedlist | 题解"><meta property=og:type content=article><meta property=og:url content=https://blog.xiaohei.im/posts/leetcode/linkedlist/><meta property=article:published_time content=2019-12-26T18:22:05+08:00><meta property=article:modified_time content=2019-12-26T18:22:05+08:00><meta name=twitter:card content=summary><meta name=twitter:title content=「LeetCode」链表题解><meta name=twitter:description content="leetcode | linkedlist | 题解"><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/normalize.css><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/main.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/dark.css media="(prefers-color-scheme: dark)"><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom-dark.css media="(prefers-color-scheme: dark)"><script src=https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js></script><script src=https://blog.xiaohei.im/js/main.js></script></head><body><div class="container wrapper post"><div class=header><h1 class=site-title><a href=https://blog.xiaohei.im/>xiaoheiAh&#39;s blog</a></h1><div class=site-description><h2>Java Developer | 日常逛逛v站, 刷 github</h2><nav class="nav social"><ul class=flat><a href=https://github.com/xiaoheiAh title=xiaoheiAh><i data-feather=github></i></a></ul></nav></div><nav class=nav><ul class=flat><li><a href=/>Home</a></li><li><a href=/posts>All posts</a></li><li><a href=/tags>Tags</a></li><li><a href=/awesome>Awesome</a></li><li><a href=/cheatsheet>CheatSheet</a></li><li><a href=/about>About</a></li></ul></nav></div><div class=post-header><h1 class=title>「LeetCode」链表题解</h1><div class=meta>Posted at &mdash; Dec 26, 2019</div></div><div class=markdown><p>链表需要注意的问题:</p><ul><li>边界: 头结点尾结点的处理,链表长度为1时的处理</li><li>多画图,跟一次循环,边界情况也画图试试</li><li>思路大多都是 <strong>快慢指针</strong></li></ul><h4 id=no-19-remove-nth-node-from-end-of-list-https-leetcode-com-problems-remove-nth-node-from-end-of-list-medium><a href=https://leetcode.com/problems/remove-nth-node-from-end-of-list/>No.19 =&gt; Remove Nth Node From End of List</a> <strong>Medium</strong></h4><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>ListNode</span> removeNthFromEnd(ListNode <span style=color:#268bd2>head</span>, <span style=color:#dc322f>int</span> <span style=color:#268bd2>n</span>) {
+  <span style=color:#586e75>// 快慢指针
+</span><span style=color:#586e75></span>  ListNode <span style=color:#268bd2>fast</span> <span style=color:#719e07>=</span> head,slow <span style=color:#719e07>=</span> head,prev <span style=color:#719e07>=</span> <span style=color:#cb4b16>null</span>;
+  <span style=color:#719e07>while</span>(fast.next <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+    <span style=color:#719e07>if</span> (<span style=color:#719e07>--</span>n <span style=color:#719e07>&lt;=</span> 0) {
+      <span style=color:#586e75>// 先走 n 步后,slow 再走
+</span><span style=color:#586e75></span>      prev <span style=color:#719e07>=</span> slow;
+      slow <span style=color:#719e07>=</span> slow.next;
+    }
+    fast <span style=color:#719e07>=</span> fast.next;
+  }
+  <span style=color:#586e75>// fast 走完,slow 刚好到倒数 n 的位置
+</span><span style=color:#586e75></span>  <span style=color:#586e75>// 删除 slow 节点
+</span><span style=color:#586e75></span>  <span style=color:#719e07>if</span>( prev <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+    <span style=color:#586e75>// 说明删除的是头结点
+</span><span style=color:#586e75></span>    <span style=color:#719e07>if</span>(slow.next <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+      <span style=color:#586e75>// 说明链表只有一个节点.且需要删除的就是这个.
+</span><span style=color:#586e75></span>      head <span style=color:#719e07>=</span> <span style=color:#cb4b16>null</span>;
+    } <span style=color:#719e07>else</span> {
+      <span style=color:#586e75>// 大于一个节点就需要把 head 指向 slow.next
+</span><span style=color:#586e75></span>      head <span style=color:#719e07>=</span> prev <span style=color:#719e07>=</span> slow.next;
+    }
+  } <span style=color:#719e07>else</span> {
+    prev.next <span style=color:#719e07>=</span> slow.next;
+  }
+  <span style=color:#719e07>return</span> head;
+}</code></pre></div><h4 id=no-2-add-two-numbers-https-leetcode-com-problems-add-two-numbers-medium><a href=https://leetcode.com/problems/add-two-numbers/>No.2 =&gt; Add Two Numbers</a> <strong>Medium</strong></h4><p>思路: 就按着这个链表顺序加,然后生成一个链表就自然是倒序的了.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>ListNode</span> addTwoNumbers(ListNode <span style=color:#268bd2>l1</span>, ListNode <span style=color:#268bd2>l2</span>) {
+  <span style=color:#586e75>// 一次累加,reverse
+</span><span style=color:#586e75></span>  ListNode <span style=color:#268bd2>result</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> ListNode(0);
+  ListNode <span style=color:#268bd2>head</span> <span style=color:#719e07>=</span> result;
+  <span style=color:#dc322f>int</span> <span style=color:#268bd2>carry</span> <span style=color:#719e07>=</span> 0;
+  <span style=color:#719e07>while</span>(l1 <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span> <span style=color:#719e07>||</span> l2 <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span> <span style=color:#719e07>||</span> carry <span style=color:#719e07>&gt;</span> 0) {
+    <span style=color:#dc322f>int</span> <span style=color:#268bd2>v1</span> <span style=color:#719e07>=</span> 0;
+    <span style=color:#dc322f>int</span> <span style=color:#268bd2>v2</span> <span style=color:#719e07>=</span> 0;
+    <span style=color:#719e07>if</span>(l1 <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+      v1 <span style=color:#719e07>=</span> l1.val;
+      l1 <span style=color:#719e07>=</span> l1.next;
+    }
+    <span style=color:#719e07>if</span>(l2 <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+      v2 <span style=color:#719e07>=</span> l2.val;
+      l2 <span style=color:#719e07>=</span> l2.next;
+    }
+    <span style=color:#dc322f>int</span> <span style=color:#268bd2>sum</span> <span style=color:#719e07>=</span> v1 <span style=color:#719e07>+</span> v2 <span style=color:#719e07>+</span> carry;
+    result.next <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> ListNode( sum <span style=color:#719e07>%</span> 10);
+    result <span style=color:#719e07>=</span> result.next;
+    carry <span style=color:#719e07>=</span> sum <span style=color:#719e07>/</span> 10 ;
+  }
+  <span style=color:#719e07>return</span> head.next;
+}</code></pre></div><h4 id=no-21-merge-two-sorted-lists-https-leetcode-com-problems-merge-two-sorted-lists-easy><a href=https://leetcode.com/problems/merge-two-sorted-lists/>No.21 =&gt; Merge Two Sorted Lists</a> <strong>EASY</strong></h4><h5 id=非递归><strong>非递归</strong></h5><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>ListNode</span> mergeTwoLists(ListNode <span style=color:#268bd2>l1</span>, ListNode <span style=color:#268bd2>l2</span>) {
+    <span style=color:#586e75>// 边界条件需要判断
+</span><span style=color:#586e75></span>    <span style=color:#719e07>if</span> (l1 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) <span style=color:#719e07>return</span> l2;
+    <span style=color:#719e07>if</span> (l2 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) <span style=color:#719e07>return</span> l1;
+    ListNode <span style=color:#268bd2>dummy</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> ListNode(0), head <span style=color:#719e07>=</span> dummy;
+    <span style=color:#719e07>while</span>(l1 <span style=color:#719e07>!=</span><span style=color:#cb4b16>null</span> <span style=color:#719e07>||</span> l2 <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+        <span style=color:#719e07>if</span>(l1 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+            head.next <span style=color:#719e07>=</span> l2;
+            l2 <span style=color:#719e07>=</span> l2.next;
+        } <span style=color:#719e07>else</span> <span style=color:#719e07>if</span> (l2 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+            head.next <span style=color:#719e07>=</span> l1;
+            l1 <span style=color:#719e07>=</span> l1.next;
+        } <span style=color:#719e07>else</span> <span style=color:#719e07>if</span> (l1.val <span style=color:#719e07>&gt;=</span> l2.val) {
+            head.next <span style=color:#719e07>=</span> l2;
+            l2 <span style=color:#719e07>=</span> l2.next;
+        } <span style=color:#719e07>else</span> {
+            head.next <span style=color:#719e07>=</span> l1;
+            l1 <span style=color:#719e07>=</span> l1.next;
+        }
+        head <span style=color:#719e07>=</span> head.next;
+    }
+    <span style=color:#719e07>return</span> dummy.next;
+}</code></pre></div><h5 id=递归><strong>递归</strong></h5><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>ListNode</span> mergeTwoLists(ListNode <span style=color:#268bd2>l1</span>, ListNode <span style=color:#268bd2>l2</span>) {
+    <span style=color:#586e75>// 边界条件需要判断
+</span><span style=color:#586e75></span>    <span style=color:#719e07>if</span> (l1 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) <span style=color:#719e07>return</span> l2;
+    <span style=color:#719e07>if</span> (l2 <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) <span style=color:#719e07>return</span> l1;
+    <span style=color:#719e07>if</span> (l1.val <span style=color:#719e07>&lt;=</span> l2.val) {
+        l1.next <span style=color:#719e07>=</span> mergeTwoLists(l1.next,l2);
+        <span style=color:#719e07>return</span> l1;
+    } <span style=color:#719e07>else</span> {
+        l2.next <span style=color:#719e07>=</span> mergeTwoLists(l1, l2.next);
+        <span style=color:#719e07>return</span> l2;
+    }
+}</code></pre></div><h4 id=no-24-swap-nodes-in-pairs-https-leetcode-com-problems-swap-nodes-in-pairs-medium><a href=https://leetcode.com/problems/swap-nodes-in-pairs/>No.24 =&gt; Swap Nodes in Pairs</a> <strong>Medium</strong></h4><p>思路: 走两步然后替换这两个node,考虑head为空和头两个节点交换的情况</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>ListNode</span> swapPairs(ListNode <span style=color:#268bd2>head</span>) {
+  <span style=color:#719e07>if</span>(head <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+    <span style=color:#719e07>return</span> <span style=color:#cb4b16>null</span>;
+  }
+  <span style=color:#dc322f>int</span> <span style=color:#268bd2>step</span> <span style=color:#719e07>=</span> 1;
+  ListNode <span style=color:#268bd2>prev</span> <span style=color:#719e07>=</span> <span style=color:#cb4b16>null</span>;
+  ListNode <span style=color:#268bd2>curr</span> <span style=color:#719e07>=</span> head;
+  <span style=color:#719e07>while</span>(curr.next <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+    <span style=color:#719e07>if</span>(<span style=color:#719e07>++</span>step <span style=color:#719e07>%</span> 2 <span style=color:#719e07>==</span> 0) {
+      <span style=color:#586e75>// 每两个反转链表
+</span><span style=color:#586e75></span>      <span style=color:#719e07>if</span> (prev <span style=color:#719e07>==</span> <span style=color:#cb4b16>null</span>) {
+        <span style=color:#586e75>// 是头结点与第二个节点反转
+</span><span style=color:#586e75></span>        ListNode <span style=color:#268bd2>second</span> <span style=color:#719e07>=</span> curr.next;
+        curr.next <span style=color:#719e07>=</span> second.next;
+        second.next <span style=color:#719e07>=</span> curr;
+        head <span style=color:#719e07>=</span> second;
+      } <span style=color:#719e07>else</span> {
+        <span style=color:#586e75>// 中间节点 swap
+</span><span style=color:#586e75></span>        ListNode <span style=color:#268bd2>second</span> <span style=color:#719e07>=</span> curr.next;
+        curr.next <span style=color:#719e07>=</span> curr.next.next;
+        prev.next <span style=color:#719e07>=</span> second;
+        second.next <span style=color:#719e07>=</span> curr;
+      }
+    } <span style=color:#719e07>else</span> {
+      <span style=color:#586e75>// 走两步~
+</span><span style=color:#586e75></span>      prev <span style=color:#719e07>=</span> curr;
+      curr <span style=color:#719e07>=</span> curr.next;
+    }
+  }
+  <span style=color:#719e07>return</span> head;
+}</code></pre></div></div><div class=post-tags><nav class="nav tags"><ul class=flat><li><a href=/tags/leetcode>leetcode</a></li></ul></nav></div><script src=https://utteranc.es/client.js repo=xiaoheiAh/xiaoheiAh.github.io issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><div class="footer wrapper"><nav class=nav><div>© Copyright notice | <a href=https://github.com/vividvilla/ezhil>Ezhil theme</a> | Built with <a href=https://gohugo.io>Hugo</a></div></nav></div><script type=application/javascript>var doNotTrack=false;if(!doNotTrack){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;ga('create','UA-98254666-1','auto');ga('send','pageview');}</script><script async src=https://www.google-analytics.com/analytics.js></script><script>feather.replace()</script></body></html>

@@ -1,0 +1,88 @@
+<!doctype html><html><head lang=zh><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><title>Hexo =&gt; Hugo主题移植记录 - xiaoheiAh&#39;s blog</title><link rel=icon type=image/png href=https://blog.xiaohei.im/favicon.ico><meta name=viewport content="width=device-width,initial-scale=1"><meta property=og:title content="Hexo =&gt; Hugo主题移植记录"><meta property=og:description content="「 hugo」| 主题开发 | hexo 移植"><meta property=og:type content=article><meta property=og:url content=https://blog.xiaohei.im/posts/hugo-theme-dev-note/><meta property=article:published_time content=2019-09-23T19:08:35+08:00><meta property=article:modified_time content=2019-09-23T19:08:35+08:00><meta name=twitter:card content=summary><meta name=twitter:title content="Hexo =&gt; Hugo主题移植记录"><meta name=twitter:description content="「 hugo」| 主题开发 | hexo 移植"><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/normalize.css><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/main.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/dark.css media="(prefers-color-scheme: dark)"><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom-dark.css media="(prefers-color-scheme: dark)"><script src=https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js></script><script src=https://blog.xiaohei.im/js/main.js></script></head><body><div class="container wrapper post"><div class=header><h1 class=site-title><a href=https://blog.xiaohei.im/>xiaoheiAh&#39;s blog</a></h1><div class=site-description><h2>Java Developer | 日常逛逛v站, 刷 github</h2><nav class="nav social"><ul class=flat><a href=https://github.com/xiaoheiAh title=xiaoheiAh><i data-feather=github></i></a></ul></nav></div><nav class=nav><ul class=flat><li><a href=/>Home</a></li><li><a href=/posts>All posts</a></li><li><a href=/tags>Tags</a></li><li><a href=/awesome>Awesome</a></li><li><a href=/cheatsheet>CheatSheet</a></li><li><a href=/about>About</a></li></ul></nav></div><div class=post-header><h1 class=title>Hexo =&gt; Hugo主题移植记录</h1><div class=meta>Posted at &mdash; Sep 23, 2019</div></div><div class=markdown><blockquote><p>最近使用<a href=https://gohugo.io/>Hugo</a>作为博客引擎后,闲不下来总想去找一些简单好看的主题.在<a href=https://themes.gohugo.io/>官方的主题列表</a>搜罗了一圈后,选择了<a href=https://github.com/joway/hugo-theme-yinyang>yinyang</a>,非常简单,但是用了一段时间还是想找个功能全点的,无意中瞄到了一个博主的博客,主题特别吸引我,但是是 <code>hexo</code> 平台的,搜了半天也没有人移植,就自己来吧~ 移植的过程中,遇到了挺多问题,也是这些问题慢慢的熟悉了hugo的模板结构.下面就来写一写自己遇到的问题~</p></blockquote><h2 id=页面变量参数>页面变量参数</h2><blockquote><p><a href=https://gohugo.io/variables/>https://gohugo.io/variables/</a></p></blockquote><p>hugo的页面有基本的变量(我更愿意称为<strong>属性</strong>,根据这些属性来实现我们的主题模板.最主要的有三类:<code>Site</code>, <code>Page</code>, <code>Taxonomy</code>.</p><h3 id=site>.Site</h3><blockquote><p>站点相关的属性,即config.toml(yml)文件中的配置.</p></blockquote><p>在页面模板中,我们可以使用<code>{{- .Site.Autor }}</code>这样的方式来获取你想要的站点属性.具体的站点属性可以查看<a href=https://gohugo.io/variables/site/>https://gohugo.io/variables/site/</a>. <code>.Site</code> 属于全局配置,在 <strong>作用域</strong> 得当的情况下是可以正常调用的.非正常情况我们下面再讲.</p><h4 id=常用属性>常用属性</h4><ol><li><p><code>.Site.Pages</code> : 获取所有文章(包含生成的一些分类页,比如说 <code>标签页</code>),按时间倒序排序.返回是一个数组.我们经常用来渲染一个列表.比如 <code>归档</code> 页面.</p></li><li><p><code>.Site.Taxonomies</code> : 获取所有的分类(这里的分类是广义上的),可以获取到按<code>tag</code>分类的集合,也可以获取到按<code>category</code>分类的集合,可以用这个属性来完成<code>分类</code>的页面.下面这段代码就代表着我可以拿到所有的 <code>分类页</code> ,循环得到分类页的链接和标题.</p></li></ol><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>{{- range .Site.Taxonomies.categories }}
+&lt;<span style=color:#268bd2>li</span>&gt;&lt;<span style=color:#268bd2>a</span> href<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{ .Page.Permalink }}&#34;</span>&gt;{{ .Page.Title }}&lt;/<span style=color:#268bd2>a</span>&gt;&lt;/<span style=color:#268bd2>li</span>&gt;
+{{- end }}</code></pre></div><ol start=3><li><code>.Site.Params</code> 可以获取到我们在<code>config.toml</code>的<code>Params</code>标签下设置的内容.也是很重要的属性.比如说下面的例子.我可以设置日期的格式化样式,展示成你想要的类型.</li></ol><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>&lt;<span style=color:#268bd2>p</span>&gt;{{ .Date.Format (.Site.Params.dateFormatToUse | default &#34;2006-01-02&#34;)}}&lt;/<span style=color:#268bd2>p</span>&gt;</code></pre></div><h3 id=page>.Page</h3><blockquote><p>页面中定义的属性.</p></blockquote><p>页面属性可以大致分为两部分,一个是<code>Hugo</code>原生的属性,一个是每一篇文章的文件头,即<code>front matter</code>中的属性.具体的属性可以在<a href=https://gohugo.io/variables/page/查看>https://gohugo.io/variables/page/查看</a>. 在一个页面的作用域中使用时可以直接调用.比如我们想要知道页面的创建日期就可以直接 <code>{{ .Date }}</code> 即可.</p><h4 id=常用属性-1>常用属性</h4><ol><li><code>.Date/.Title/.ReadingTime/.WordCount</code> 见名知意</li><li><code>.Permalink/.RelPermalink</code> 永久链接及相对连接</li><li><code>.Summary</code> 摘要,默认70字</li><li><code>.Pages</code> 为什么页面中还有一个这样的属性呢? <code>Page</code>是包含生成的<code>分类页</code>, <code>标签页</code>的,所有当处于这些页面时会返回一个集合,若是我们自己真正写的文件,即<code>markdown</code>文件,会返回<code>nil</code>的.</li></ol><h4 id=taxonomies>.Taxonomies</h4><blockquote><p>用作内容分类的管理. 我们经常在写文章时会写上 <code>categories</code> 或者 <code>tags</code>, 这些标签类目就是 <code>.Taxonomies</code> 的集中展示, <code>Hugo</code> 默认会有 <code>categories</code> 和 <code>tags</code> 两种分类. 你也可以自己再自定义设置. 具体参考: <a href=https://gohugo.io/content-management/taxonomies>https://gohugo.io/content-management/taxonomies</a></p></blockquote><h4 id=使用案例>使用案例</h4><blockquote><p>官方提供了多种 <code>Template</code> 实现常用的遍历.</p></blockquote><p>我通常会用来写标签页(<code>tags</code>)和分类页(<code>categories</code>). 直接调用 <code>.Taxonomies</code> 会获得所有的分类项(即: <code>tags</code>, <code>categories</code>, <code>自定义分类项</code>), <code>.Taxonomies.tags</code> 就可以获得所有的标签,以及标签下的所有文章.以下就是我的主题中 <code>标签</code> 页的实现逻辑.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>{{- $tags := .Site.Taxonomies.tags }}
+&lt;<span style=color:#268bd2>main</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main&#34;</span> role<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main&#34;</span>&gt;
+    &lt;<span style=color:#268bd2>article</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;article article-tags post-type-list&#34;</span> itemscope<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;&#34;</span>&gt;
+        &lt;<span style=color:#268bd2>header</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;article-header&#34;</span>&gt;
+            &lt;<span style=color:#268bd2>h1</span> itemprop<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;name&#34;</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;hidden-xs&#34;</span>&gt;{{- .Title }}&lt;/<span style=color:#268bd2>h1</span>&gt;
+            &lt;<span style=color:#268bd2>p</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;text-muted hidden-xs&#34;</span>&gt;{{- T &#34;total_tag&#34; (len $tags) }}&lt;/<span style=color:#268bd2>p</span>&gt;
+            &lt;<span style=color:#268bd2>nav</span> role<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;navigation&#34;</span> id<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;nav-main&#34;</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;okayNav&#34;</span>&gt;
+                &lt;<span style=color:#268bd2>ul</span>&gt;
+                    &lt;<span style=color:#268bd2>li</span>&gt;&lt;<span style=color:#268bd2>a</span> href<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{- &#34;</span>tags&#34; | relURL }}&#34;&gt;{{- T &#34;nav_all&#34; }}&lt;/<span style=color:#268bd2>a</span>&gt;&lt;/<span style=color:#268bd2>li</span>&gt;
+                    {{- range $tags }}
+                    &lt;<span style=color:#268bd2>li</span>&gt;&lt;<span style=color:#268bd2>a</span> href<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{ .Page.Permalink }}&#34;</span>&gt;{{ .Page.Title }}&lt;/<span style=color:#268bd2>a</span>&gt;&lt;/<span style=color:#268bd2>li</span>&gt;
+                    {{- end }}
+                &lt;/<span style=color:#268bd2>ul</span>&gt;
+            &lt;/<span style=color:#268bd2>nav</span>&gt;
+        &lt;/<span style=color:#268bd2>header</span>&gt;
+        <span style=color:#586e75>&lt;!-- /header --&gt;</span>
+        &lt;<span style=color:#268bd2>div</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;article-body&#34;</span>&gt;
+            {{- range $name, $taxonomy := $tags  }}
+            &lt;<span style=color:#268bd2>h3</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;panel-title mb-1x&#34;</span>&gt;
+                &lt;<span style=color:#268bd2>a</span> href<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{ &#34;</span>/tags/&#34; | relURL}}{{ $name | urlize }}&#34; title<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;#{{- $name }}&#34;</span>&gt;# {{ $name }}&lt;/<span style=color:#268bd2>a</span>&gt;
+                &lt;<span style=color:#268bd2>small</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;text-muted&#34;</span>&gt;(Total {{- .Count }} articles)&lt;/<span style=color:#268bd2>small</span>&gt;
+            &lt;/<span style=color:#268bd2>h3</span>&gt;
+            &lt;<span style=color:#268bd2>div</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;row&#34;</span>&gt;
+                {{- range $taxonomy }}
+                &lt;<span style=color:#268bd2>div</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;col-md-6&#34;</span>&gt;
+                    {{ .Page.Scratch.Set &#34;type&#34; &#34;card&#34;}}
+                    {{- partial &#34;item-post.html&#34; . }}
+                &lt;/<span style=color:#268bd2>div</span>&gt;
+                {{- end }}
+            &lt;/<span style=color:#268bd2>div</span>&gt;
+            {{- end }}
+        &lt;/<span style=color:#268bd2>div</span>&gt;
+    &lt;/<span style=color:#268bd2>article</span>&gt;
+&lt;/<span style=color:#268bd2>main</span>&gt;</code></pre></div><h2 id=上下文传递>上下文传递</h2><blockquote><p>刚开始写 Hugo 的页面时,最让我头疼的地方就在在于此.现在想想他的逻辑是很标准的.不同的代码块上下文隔离.</p></blockquote><p>在Hugo中,上下文的传递一般是靠<code>.</code>符号来完成的. 用的最多的就是再组装页面时,需要将当前页面的作用域传递到 <code>partial</code> 的页面中去以便组装进来的页面可以获得当前页面的属性.</p><p>以下是我的 <code>baseof.html</code> 页面, 可以看到 <code>partial</code> 相关的代码中都有 <code>.</code> 符号, 这里就是将当前页面的属性传递下去了, 其他页面也就可以正常使用该页面的属性了.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=color:#719e07>&lt;!DOCTYPE html&gt;</span>
+&lt;<span style=color:#268bd2>html</span> lang<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{ .Site.Language }}&#34;</span>&gt;
+  &lt;<span style=color:#268bd2>head</span>&gt;
+    &lt;<span style=color:#268bd2>meta</span> charset<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;utf-8&#34;</span> /&gt;
+    &lt;<span style=color:#268bd2>meta</span> http-equiv<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;X-UA-Compatible&#34;</span> content<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;IE=edge,chrome=1&#34;</span> /&gt;
+    &lt;<span style=color:#268bd2>title</span>&gt;
+      {{- block &#34;title&#34; . -}}
+      {{ if .IsPage }}
+        {{ .Title }} - {{ .Site.Title }}
+      {{ else}}
+        {{ .Site.Title}}{{ end }}
+      {{- end -}}
+    &lt;/<span style=color:#268bd2>title</span>&gt;
+    {{ partial &#34;head.html&#34; . }}
+  &lt;/<span style=color:#268bd2>head</span>&gt;
+  &lt;<span style=color:#268bd2>body</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main-center&#34;</span> itemscope itemtype<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;http://schema.org/WebPage&#34;</span>&gt;
+    {{- partial &#34;header.html&#34; .}}
+    {{- if and (.Site.Params.sidebar) (or (ne .Params.sidebar &#34;none&#34;) (ne .Params.sidebar &#34;custom&#34;))}}
+        {{- partial &#34;sidebar.html&#34; . }}
+    {{end}}
+    {{ block &#34;content&#34; . }}{{ end }}
+    {{- partial &#34;footer.html&#34; . }}
+    {{- partial &#34;script.html&#34; . }}
+  &lt;/<span style=color:#268bd2>body</span>&gt;
+&lt;/<span style=color:#268bd2>html</span>&gt;</code></pre></div><h2 id=页面组织>页面组织</h2><h3 id=baseofhtml>baseof.html</h3><p><code>baseof</code> 可以理解为一种模板,符合规范定义的页面都会按照 <code>baseof.html</code> 的框架完成最后的渲染,具体可以查看<a href=https://gohugo.io/templates/base/>官网页</a>, 以本次移植主题的 <code>baseof.html</code> 来说一下.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=color:#719e07>&lt;!DOCTYPE html&gt;</span>
+&lt;<span style=color:#268bd2>html</span> lang<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;{{ .Site.Language }}&#34;</span>&gt;
+  &lt;<span style=color:#268bd2>head</span>&gt;
+    &lt;<span style=color:#268bd2>meta</span> charset<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;utf-8&#34;</span> /&gt;
+    &lt;<span style=color:#268bd2>meta</span> http-equiv<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;X-UA-Compatible&#34;</span> content<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;IE=edge,chrome=1&#34;</span> /&gt;
+    &lt;<span style=color:#268bd2>title</span>&gt;
+      {{- block &#34;title&#34; . -}}
+      {{ if .IsPage }}
+        {{ .Title }} - {{ .Site.Title }}
+      {{ else}}
+        {{ .Site.Title}}{{ end }}
+      {{- end -}}
+    &lt;/<span style=color:#268bd2>title</span>&gt;
+    {{ partial &#34;head.html&#34; . }}
+  &lt;/<span style=color:#268bd2>head</span>&gt;
+  &lt;<span style=color:#268bd2>body</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main-center&#34;</span> itemscope itemtype<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;http://schema.org/WebPage&#34;</span>&gt;
+    {{- partial &#34;header.html&#34; .}}
+    {{- if and (.Site.Params.sidebar) (or (ne .Params.sidebar &#34;none&#34;) (ne .Params.sidebar &#34;custom&#34;))}}
+        {{- partial &#34;sidebar.html&#34; . }}
+    {{end}}
+    {{ block &#34;content&#34; . }}{{ end }}
+    {{- partial &#34;footer.html&#34; . }}
+    {{- partial &#34;script.html&#34; . }}
+  &lt;/<span style=color:#268bd2>body</span>&gt;
+&lt;/<span style=color:#268bd2>html</span>&gt;</code></pre></div><p>可以看到上面的页面中就是一个完整的 <code>HTML</code> 结构,我在其中组装了很多页面,比如<code>head</code>,<code>header</code>,<code>footer</code>等等,这些在最后渲染的时候都会加入进来组成一个完整的页面.</p><p>在上面还有一个关键字 <strong>block</strong>, 比如 <code>{{ block &quot;title&quot; }}</code>, <code>{{ block &quot;content&quot;}}</code>.该关键字允许你自定义一个模板嵌进来, 只要按照规定的方式来.比如说我的文章页 <code>single.html</code>.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>{{- define &#34;content&#34;}}
+&lt;<span style=color:#268bd2>main</span> class<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main&#34;</span> role<span style=color:#719e07>=</span><span style=color:#2aa198>&#34;main&#34;</span>&gt;
+  {{- partial &#34;article.html&#34; . }}
+&lt;/<span style=color:#268bd2>main</span>&gt;
+{{- end}}</code></pre></div><p>这里我们定义了 <code>content</code> 的模板, 和 <code>baseof.html</code> 的模板呼应,在渲染一篇文章时,就会将<code>single.html</code> 嵌入 <code>baseof.html</code> 生成最后的页面了.</p><h3 id=模板页面查询规则>模板页面查询规则</h3><p>Hugo要怎么知道文章页还是标签页对应的模板是什么呢?答案: 有一套以多个属性作为依据的查询各类模板的标准.具体可以查看<a href=https://gohugo.io/templates/lookup-order/>官网页</a>.</p><p>以文章页来举例, <code>Hugo</code> 官网上的内容页寻址规则如下:</p><p><figure><img src=https://cdn.jsdelivr.net/gh/xiaoheiAh/imgs@master/20191015150712.png alt=single-lookup-order></figure></p><p>由上可见,会按照该顺序依次往下找,我一般会写在<code>layouts/_default/single.html</code> 下,这样可以在所有页面下通用.</p><p>这里有个小坑也是之前文档没看好遇到的: 标签页和分类页这种对应的查找规则要按照<a href=https://gohugo.io/templates/lookup-order/#examples-layout-lookup-for-taxonomy-terms-pages>该指引</a>.</p><h2 id=参考>参考</h2><ol><li><a href=https://harmstyler.me/posts/2019/how-to-pass-variables-to-a-partial-template-in-hugo/>https://harmstyler.me/posts/2019/how-to-pass-variables-to-a-partial-template-in-hugo/</a></li><li><a href=https://www.qikqiak.com/post/hugo-integrated-algolia-search/>https://www.qikqiak.com/post/hugo-integrated-algolia-search/</a></li></ol></div><div class=post-tags><nav class="nav tags"><ul class=flat><li><a href=/tags/hugo>hugo</a></li></ul></nav></div><script src=https://utteranc.es/client.js repo=xiaoheiAh/xiaoheiAh.github.io issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><div class="footer wrapper"><nav class=nav><div>© Copyright notice | <a href=https://github.com/vividvilla/ezhil>Ezhil theme</a> | Built with <a href=https://gohugo.io>Hugo</a></div></nav></div><script type=application/javascript>var doNotTrack=false;if(!doNotTrack){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;ga('create','UA-98254666-1','auto');ga('send','pageview');}</script><script async src=https://www.google-analytics.com/analytics.js></script><script>feather.replace()</script></body></html>

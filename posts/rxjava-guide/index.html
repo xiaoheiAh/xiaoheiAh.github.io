@@ -1,0 +1,198 @@
+<!doctype html><html><head lang=zh><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><title>RxJava入门 - xiaoheiAh&#39;s blog</title><link rel=icon type=image/png href=https://blog.xiaohei.im/favicon.ico><meta name=viewport content="width=device-width,initial-scale=1"><meta property=og:title content=RxJava入门><meta property=og:description content="「RxJava」| 背压 | 观察者模式 | 响应式编程"><meta property=og:type content=article><meta property=og:url content=https://blog.xiaohei.im/posts/rxjava-guide/><meta property=article:published_time content=2018-08-21T16:09:48+08:00><meta property=article:modified_time content=2018-08-21T16:09:48+08:00><meta name=twitter:card content=summary><meta name=twitter:title content=RxJava入门><meta name=twitter:description content="「RxJava」| 背压 | 观察者模式 | 响应式编程"><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/normalize.css><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/main.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/dark.css media="(prefers-color-scheme: dark)"><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom-dark.css media="(prefers-color-scheme: dark)"><script src=https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js></script><script src=https://blog.xiaohei.im/js/main.js></script></head><body><div class="container wrapper post"><div class=header><h1 class=site-title><a href=https://blog.xiaohei.im/>xiaoheiAh&#39;s blog</a></h1><div class=site-description><h2>Java Developer | 日常逛逛v站, 刷 github</h2><nav class="nav social"><ul class=flat><a href=https://github.com/xiaoheiAh title=xiaoheiAh><i data-feather=github></i></a></ul></nav></div><nav class=nav><ul class=flat><li><a href=/>Home</a></li><li><a href=/posts>All posts</a></li><li><a href=/tags>Tags</a></li><li><a href=/awesome>Awesome</a></li><li><a href=/cheatsheet>CheatSheet</a></li><li><a href=/about>About</a></li></ul></nav></div><div class=post-header><h1 class=title>RxJava入门</h1><div class=meta>Posted at &mdash; Aug 21, 2018</div></div><div class=markdown><blockquote><p>本文基于 rxjava 1.x 版本</p></blockquote><h2 id=前言>前言</h2><p>写这篇文章是因为之前在看Hystrix时,觉得响应式编程很有意思,之前也了解到Spring5主打特性就是响应式,就想来试试水,入个门.本文主要介绍RxJava的特点,入门操作</p><h2 id=rxjava是什么>RxJava是什么</h2><h3 id=reactive-x>Reactive X</h3><p><code>ReactiveX</code>是使用<code>Observable</code>序列来组合异步操作且基于事件驱动的一个库.其继承自<a href=https://zh.wikipedia.org/wiki/观察者模式>观察者模式</a>来支持数据流或者事件流通过添加操作符(operators)的方式来声明式的操作,并抽象出对低级别线程(low-level thread),同步,线程安全,并发数据结构,非阻塞IO问题的关注.</p><p>ReactiveX 在不同语言中都有实现,RxJava 只是在JVM上实现的一套罢了.</p><h3 id=概念>概念</h3><blockquote><p>观察者模式是该框架的灵魂~</p></blockquote><p><img src=https://i.loli.net/2019/08/21/PT56HZ2obO8vU3V.png alt=WX20190821-171445.png></p><p>上图可以表述为: <strong>观察者</strong>(Observer) <strong>订阅</strong>(subscribe)<strong>被观察者</strong>(Observable),当Observable产生事件或数据时,会调用Observer的方法进行回调.</p><p>听起来有点别扭,这里举一个形象点的例子.</p><p><strong>显示器开关</strong></p><p>显示器开关即为 Observable, 显示器为 Observer,这两个组件就会形成联系.当开关按下时,显示器就会通电点亮,这里即可抽象成Observable发出一个事件,Observer对事件做了处理.做什么样的处理其实在Subscribe时就已经决定了.</p><p><strong>回调方法</strong></p><p>在subscribe时会要求实现对应的回调方法,标准方法有以下三个:</p><ul><li><strong>onNext</strong></li></ul><p>Observable调用这个方法发射数据，方法的参数就是Observable发射的数据，这个方法可能会被调用多次，取决于你的实现。</p><ul><li><strong>onError</strong></li></ul><p>当Observable遇到错误或者无法返回期望的数据时会调用这个方法，这个调用会终止Observable，后续不会再调用onNext和onCompleted，onError方法的参数是抛出的异常。</p><ul><li><strong>onCompleted</strong></li></ul><p>正常终止，如果没有遇到错误，Observable在最后一次调用onNext之后调用此方法。</p><h3 id=hot-or-cold-observables>&ldquo;Hot&rdquo; or &ldquo;Cold&rdquo; Observables</h3><p>Observable何时开始发送数据呢?基于此问题,可以将Observable分为两类: <code>Hot</code> &amp; <code>Cold</code> . 可以理解为主动型和被动型.</p><p><strong>Hot Observable</strong>: Observable一经创建,就会开始发送数据. 所以后面订阅的Observer可能消费不到Observable完整的数据.</p><p><strong>Cold Observable</strong>: Observable会等到有Observer订阅时才开始发送数据,此时Observer会消费到完整的数据</p><h2 id=rxjava入门>RxJava入门</h2><h3 id=hello-world>Hello World</h3><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.create(<span style=color:#719e07>new</span> Observable.OnSubscribe<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Subscriber<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>super</span> <span style=color:#268bd2>String</span><span style=color:#719e07>&gt;</span> subscriber) {
+      subscriber.onNext(<span style=color:#2aa198>&#34;Hello World&#34;</span>);
+      subscriber.onCompleted();
+      <span style=color:#586e75>//subscriber.onError(new RuntimeException(&#34;error&#34;));
+</span><span style=color:#586e75></span>    }
+  	}).subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+      System.out.println(<span style=color:#2aa198>&#34;观察结束啦~~~&#34;</span>);
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>e</span>) {
+      System.out.println(<span style=color:#2aa198>&#34;观察出错啦~~~&#34;</span>);
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(String <span style=color:#268bd2>s</span>) {
+      System.out.println(<span style=color:#2aa198>&#34;onNext:&#34;</span> <span style=color:#719e07>+</span> s);
+    }
+  });
+}</code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>// onNext:Hello World
+</span><span style=color:#586e75>// 观察结束啦~~~
+</span><span style=color:#586e75>// 注释掉上一行 打开下一行注释 就会输出
+</span><span style=color:#586e75>// onNext:Hello World
+</span><span style=color:#586e75></span><span style=color:#719e07>//</span> 观察出错啦<span style=color:#719e07>~~~</span></code></pre></div><p>上述即为一个标准的创建观察者被观察者并订阅,实现订阅逻辑.</p><p><strong>疑问</strong></p><ol><li>为什么<code>subscribe</code>方法的参数是<code>Subscriber</code>呢?</li></ol><p>在rxjava中Observer是接口,Subscriber实现了Observer并提供了拓展.所以普遍用这个.</p><ol><li>为什么是Observable.subscribe(Observer)?用上面的显示器开关的例子来说就相当于显示器开关订阅显示器.</li></ol><p>为了保证流式风格~rxjava提供了一系列的操作符来对Observable发出的数据做处理,流式风格可以使操作符使用起来更友好.所以就当做Observable订阅了Observer吧:man_facepalming:</p><h3 id=操作符-operators>操作符 Operators</h3><p>单纯的使用上面的<code>Hello World</code>撸码只能说是观察者模式的运用罢了,操作符才是<code>ReactiveX</code>最强大的地方.我们可以通过功能不同的操作符对Observable发出的数据做过滤(filter),转换(map)来满足业务的需求.其实就可以当作是Java8的<code>lambda</code>特性.</p><blockquote><p>Observable在经过操作符处理后还是一个Observable,对应上述的<strong>流式风格</strong></p></blockquote><p>案例: 假设我们需要监听鼠标在一个直角坐标系中的点击,取得所有在第一象限点击的坐标.</p><p><img src=https://i.loli.net/2019/08/22/eQnOjomU7IufBpk.png alt=marble.png></p><p>从该流程图可以看出,鼠标点击后会发出很多数据,一次点击一个点,我们对数据进行filter,得到了下方时间轴上的数据源.这就是我们想要的.下面来看下常用的操作符有哪些?</p><h4 id=创建型操作符>创建型操作符</h4><blockquote><p>用于创建Observable对象的操作符</p></blockquote><h5 id=create>Create</h5><p>创建一个Observable,需要传递一个<code>Function</code>来完成调用Observer的逻辑.</p><p>一个标准的Observable必须只能调用一次(<strong>Exactly Once</strong>)<code>onCompleted</code>或者<code>onError</code>,并且在调用后不能再调用Observer的其他方法(eg: onNext).</p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.create(<span style=color:#719e07>new</span> Observable.OnSubscribe<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Subscriber<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>super</span> <span style=color:#268bd2>Integer</span><span style=color:#719e07>&gt;</span> observer) {
+        <span style=color:#719e07>try</span> {
+            <span style=color:#719e07>if</span> (<span style=color:#719e07>!</span>observer.isUnsubscribed()) {
+                <span style=color:#719e07>for</span> (<span style=color:#dc322f>int</span> <span style=color:#268bd2>i</span> <span style=color:#719e07>=</span> 1; i <span style=color:#719e07>&lt;</span> 5; i<span style=color:#719e07>++</span>) {
+                    observer.onNext(i);
+                }
+                observer.onCompleted();
+            }
+        } <span style=color:#719e07>catch</span> (Exception <span style=color:#268bd2>e</span>) {
+            observer.onError(e);
+        }
+    }
+ } ).subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span>() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(Integer <span style=color:#268bd2>item</span>) {
+            System.out.println(<span style=color:#2aa198>&#34;Next: &#34;</span> <span style=color:#719e07>+</span> item);
+        }
+
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>error</span>) {
+            System.err.println(<span style=color:#2aa198>&#34;Error: &#34;</span> <span style=color:#719e07>+</span> error.getMessage());
+        }
+
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+            System.out.println(<span style=color:#2aa198>&#34;Sequence complete.&#34;</span>);
+        }
+    });</code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>Next: <span style=color:#2aa198>1</span>
+Next: <span style=color:#2aa198>2</span>
+Next: <span style=color:#2aa198>3</span>
+Next: <span style=color:#2aa198>4</span>
+Sequence complete.</code></pre></div><h5 id=defer>Defer</h5><p>直到有Observer订阅时才会创建,并且会为每一个Observer创建新的Observable,这样可以保证所有Observer可以看到相同的数据,并且从头开始消费.</p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>defer</span> <span style=color:#719e07>=</span> Observable.defer(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>() {
+        <span style=color:#719e07>return</span> Observable.just(<span style=color:#2aa198>&#34;Hello&#34;</span>, <span style=color:#2aa198>&#34;World&#34;</span>);
+    }
+});
+
+defer.subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+        System.out.println(<span style=color:#2aa198>&#34;第一个订阅完成啦~&#34;</span>);
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>e</span>) {
+        System.out.println(<span style=color:#2aa198>&#34;第一个订阅报错啦~&#34;</span>);
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(String <span style=color:#268bd2>s</span>) {
+        System.out.println(<span style=color:#2aa198>&#34;第一个订阅收到:&#34;</span> <span style=color:#719e07>+</span> s);
+    }
+});
+
+defer.subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>() {
+		<span style=color:#586e75>//与上一个订阅逻辑相同
+</span><span style=color:#586e75></span>});</code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>第一个订阅收到:Hello
+第一个订阅收到:World
+第一个订阅完成啦~
+第二个订阅收到:Hello
+第二个订阅收到:World
+第二个订阅完成啦~</code></pre></div><p><strong>Note:</strong></p><p>Defer在RxJava中的实现其实有点像指派,可以看到构建时,传参为<code>Func0&lt;Observable&lt;T&gt;&gt;</code>,Observer真正订阅的是传参中的Observable.</p><h5 id=just>Just</h5><p>在上文<code>Defer</code>中代码中就用了<code>Just</code>,指的是可以发送特定的数据.代码一致就不作展示了.</p><h5 id=interval>Interval</h5><p>可以按照指定时间间隔从0开始发送无限递增序列.</p><h6 id=参数>参数</h6><ul><li>initalDelay 延迟多长时间开始第一次发送</li><li>period 指定时间间隔</li><li>unit 时间单位</li></ul><p>如下例子:延迟0秒后开始发送,每1秒发送一次. 因为sleep 100秒,会发送0-99终止</p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.interval(0,1,TimeUnit.SECONDS).subscribe(<span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>Long<span style=color:#719e07>&gt;</span>() {
+  	<span style=color:#586e75>// 这里只实现了OnNext方法,onError和onCompleted可以有默认实现.一种偷懒写法
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Long <span style=color:#268bd2>aLong</span>) {
+        System.out.println(aLong);
+    }
+});
+<span style=color:#719e07>try</span> {
+  	<span style=color:#586e75>//阻塞当前线程使程序一直跑
+</span><span style=color:#586e75></span>    TimeUnit.SECONDS.sleep(100);
+} <span style=color:#719e07>catch</span> (InterruptedException <span style=color:#268bd2>e</span>) {
+    e.printStackTrace();
+}</code></pre></div><h4 id=转换操作符>转换操作符</h4><blockquote><p>将Observable发出的数据进行各类转换的操作符</p></blockquote><h5 id=buffer>Buffer</h5><p><img src=https://i.loli.net/2019/08/22/IC3vbhSDGgUYku5.png alt=buffer.png></p><p>如上图所示,buffer定期将数据收集到集合中,并将集合打包发送.</p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.just(2,3,5,6)
+        .buffer(3)
+        .subscribe(<span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>List<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;&gt;</span>() {
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(List<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>integers</span>) {
+                System.out.println(integers);
+            }
+        });</code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#719e07>[</span><span style=color:#2aa198>2</span>, <span style=color:#2aa198>3</span>, <span style=color:#2aa198>5</span><span style=color:#719e07>]</span>
+<span style=color:#719e07>[</span><span style=color:#2aa198>6</span><span style=color:#719e07>]</span></code></pre></div><p><strong>Window</strong></p><p>window和buffer是非常像的两个操作符,区别在于buffer会将存起来的item打包再发出去,而window则只是单纯的将item堆起来,达到阈值再发出去,不对原数据结构做修改.</p><p><img src=https://i.loli.net/2019/08/22/kqIb5j6xfPDdOZn.png alt=window.png></p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.just(2,3,5,6)
+        .window(3)
+        .subscribe(<span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;&gt;</span>() {
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Observable<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>integerObservable</span>) {
+                integerObservable.subscribe(<span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span>() {
+                    <span style=color:#268bd2>@Override</span>
+                    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Integer <span style=color:#268bd2>integer</span>) {
+                        <span style=color:#586e75>// do anything
+</span><span style=color:#586e75></span>                    }
+                });
+            }
+        });</code></pre></div><h4 id=合并操作符>合并操作符</h4><blockquote><p>将多个Observable合并为一个的操作符</p></blockquote><h5 id=zip>Zip</h5><p>使用一个函数组合多个Observable发射的数据集合，然后再发射这个结果。如果多个Observable发射的数据量不一样，则以最少的Observable为标准进行组合.</p><p><img src=https://i.loli.net/2019/08/22/Nu4TCMEHKGA3Y1V.png alt=zip.png></p><p><strong>sample code</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span>  <span style=color:#268bd2>observable1</span><span style=color:#719e07>=</span>Observable.just(1,2,3,4);
+Observable<span style=color:#719e07>&lt;</span>Integer<span style=color:#719e07>&gt;</span>  <span style=color:#268bd2>observable2</span><span style=color:#719e07>=</span>Observable.just(4,5,6);
+Observable.zip(observable1, observable2, <span style=color:#719e07>new</span> Func2<span style=color:#719e07>&lt;</span>Integer, Integer, String<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>String</span> call(Integer <span style=color:#268bd2>item1</span>, Integer <span style=color:#268bd2>item2</span>) {
+        <span style=color:#719e07>return</span> item1<span style=color:#719e07>+</span><span style=color:#2aa198>&#34;and&#34;</span><span style=color:#719e07>+</span>item2;
+    }
+}).subscribe(<span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(String <span style=color:#268bd2>s</span>) {
+        System.out.println(s);
+    }
+}); </code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>1and4
+2and5
+3and6</code></pre></div><h4 id=背压操作符>背压操作符</h4><blockquote><p>用于平衡Observer消费速度,Observable生产速度的操作符</p></blockquote><p>背压是指在异步场景中,被观察者发送事件速度远快于观察者的处理速度的情况下，一种告诉上游的被观察者降低发送速度的策略.下图可以很好阐释背压机制是如何运行的.</p><p><img src=https://i.loli.net/2019/09/02/4TyQFgBkIAO1R2c.png alt=backpressure.png></p><p>宗旨就是<strong>下游告诉上游我能处理多少你就给我发多少.</strong></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>//被观察者将产生100000个事件
+</span><span style=color:#586e75></span>Observable <span style=color:#268bd2>observable</span><span style=color:#719e07>=</span>Observable.range(1,100000);
+observable.observeOn(Schedulers.newThread())
+        .subscribe(<span style=color:#719e07>new</span> Subscriber() {
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+
+            }
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>e</span>) {
+
+            }
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(Object <span style=color:#268bd2>o</span>) {
+                <span style=color:#719e07>try</span> {
+                    TimeUnit.SECONDS.sleep(1);
+                } <span style=color:#719e07>catch</span> (InterruptedException <span style=color:#268bd2>e</span>) {
+                    e.printStackTrace();
+                }
+              	System.out.println(<span style=color:#2aa198>&#34;on Next Request...&#34;</span>);
+                request(1);
+            }
+        });</code></pre></div><h5 id=背压支持>背压支持</h5><p>上述样例代码中创建Observable使用的是<code>range</code>操作符,这是因为他是支持背压的,如果用<code>interval</code>,request的方法将不起作用.因为<code>interval</code>不支持背压.那什么样的Observable支持背压呢?</p><p>在前面介绍概念时,有提到过<code>Hot</code>&amp;<code>Cold</code>的区别,<code>Hot</code>类型的Observable,即一经创建就开始发送,<strong>不支持</strong>背压,<code>Cold</code>类型的Observable也只是<strong>部分</strong>支持.</p><h5 id=onbackpressurebuffer-onbackpressuredrop>onBackpressurebuffer/onBackpressureDrop</h5><p>不支持背压的操作符我们可以如何实现背压呢?就通过<code>onBackpressurebuffer/onBackpressureDrop</code>来实现.顾名思义一个是缓存,一个是丢弃.</p><p>这里以<code>drop</code>方式来展示.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>Observable.interval(1, TimeUnit.MILLISECONDS)
+  .onBackpressureDrop()
+  <span style=color:#586e75>//指定observer调度io线程上,并将缓存size置为1,这个缓存会提前将数据存好在消费,
+</span><span style=color:#586e75></span>  <span style=color:#586e75>//默认在PC上是128,设置小一点可以快速的看到drop的效果
+</span><span style=color:#586e75></span>  .observeOn(Schedulers.io(), 1)
+  .subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>Long<span style=color:#719e07>&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>e</span>) {
+      System.out.println(<span style=color:#2aa198>&#34;Error:&#34;</span> <span style=color:#719e07>+</span> e.getMessage());
+    }
+
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(Long <span style=color:#268bd2>aLong</span>) {
+      System.out.println(<span style=color:#2aa198>&#34;订阅 &#34;</span> <span style=color:#719e07>+</span> aLong);
+      <span style=color:#719e07>try</span> {
+        TimeUnit.MILLISECONDS.sleep(100);
+      } <span style=color:#719e07>catch</span> (InterruptedException <span style=color:#268bd2>e</span>) {
+        e.printStackTrace();
+      }
+    }
+ 	})</code></pre></div><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>订阅 <span style=color:#2aa198>0</span>
+订阅 <span style=color:#2aa198>103</span>
+订阅 <span style=color:#2aa198>207</span>
+订阅 <span style=color:#2aa198>300</span>
+订阅 <span style=color:#2aa198>417</span>
+订阅 <span style=color:#2aa198>519</span>
+订阅 <span style=color:#2aa198>624</span>
+订阅 <span style=color:#2aa198>726</span>
+订阅 <span style=color:#2aa198>827</span>
+订阅 <span style=color:#2aa198>931</span>
+订阅 <span style=color:#2aa198>1035</span>
+订阅 <span style=color:#2aa198>1138</span>
+订阅 <span style=color:#2aa198>1244</span>
+订阅 <span style=color:#2aa198>1349</span></code></pre></div><p>可以很明显的看出很多数据被丢掉了,这就是背压的效果.</p><h2 id=总结>总结</h2><p>写了这么多后,想来说说自己的感受.</p><ol><li>转变思想: 响应式编程的思想跟我们现在后端开发思路是有区别的.可能刚开始会不适应.</li><li>不易调试: 流式风格写着爽,调着难</li></ol><h2 id=参考>参考</h2><p><a href=http://reactivex.io/documentation/>ReactiveX官网</a></p><p><a href=https://zhuanlan.zhihu.com/p/24473022>关于RxJava最友好的文章——背压（Backpressure)</a></p><p><a href=http://zhangtielei.com/posts/blog-rxjava-backpressure.html>如何形象地描述RxJava中的背压和流控机制？</a></p></div><div class=post-tags><nav class="nav tags"><ul class=flat><li><a href=/tags/rxjava>rxjava</a></li><li><a href=/tags/%E5%93%8D%E5%BA%94%E5%BC%8F%E7%BC%96%E7%A8%8B>响应式编程</a></li></ul></nav></div><script src=https://utteranc.es/client.js repo=xiaoheiAh/xiaoheiAh.github.io issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><div class="footer wrapper"><nav class=nav><div>© Copyright notice | <a href=https://github.com/vividvilla/ezhil>Ezhil theme</a> | Built with <a href=https://gohugo.io>Hugo</a></div></nav></div><script type=application/javascript>var doNotTrack=false;if(!doNotTrack){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;ga('create','UA-98254666-1','auto');ga('send','pageview');}</script><script async src=https://www.google-analytics.com/analytics.js></script><script>feather.replace()</script></body></html>

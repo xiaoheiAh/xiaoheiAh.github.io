@@ -1,0 +1,398 @@
+<!doctype html><html><head lang=zh><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><title>Hystrix命令执行流程 - xiaoheiAh&#39;s blog</title><link rel=icon type=image/png href=https://blog.xiaohei.im/favicon.ico><meta name=viewport content="width=device-width,initial-scale=1"><meta property=og:title content=Hystrix命令执行流程><meta property=og:description content="「RxJava」| Hystrix | 响应式编程"><meta property=og:type content=article><meta property=og:url content=https://blog.xiaohei.im/posts/rxjava-in-hystrix/><meta property=article:published_time content=2019-08-26T15:25:08+08:00><meta property=article:modified_time content=2019-08-26T15:25:08+08:00><meta name=twitter:card content=summary><meta name=twitter:title content=Hystrix命令执行流程><meta name=twitter:description content="「RxJava」| Hystrix | 响应式编程"><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/normalize.css><link rel=stylesheet type=text/css media=screen href=https://blog.xiaohei.im/css/main.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom.css><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/dark.css media="(prefers-color-scheme: dark)"><link rel=stylesheet type=text/css href=https://blog.xiaohei.im/css/custom-dark.css media="(prefers-color-scheme: dark)"><script src=https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js></script><script src=https://blog.xiaohei.im/js/main.js></script></head><body><div class="container wrapper post"><div class=header><h1 class=site-title><a href=https://blog.xiaohei.im/>xiaoheiAh&#39;s blog</a></h1><div class=site-description><h2>Java Developer | 日常逛逛v站, 刷 github</h2><nav class="nav social"><ul class=flat><a href=https://github.com/xiaoheiAh title=xiaoheiAh><i data-feather=github></i></a></ul></nav></div><nav class=nav><ul class=flat><li><a href=/>Home</a></li><li><a href=/posts>All posts</a></li><li><a href=/tags>Tags</a></li><li><a href=/awesome>Awesome</a></li><li><a href=/cheatsheet>CheatSheet</a></li><li><a href=/about>About</a></li></ul></nav></div><div class=post-header><h1 class=title>Hystrix命令执行流程</h1><div class=meta>Posted at &mdash; Aug 26, 2019</div></div><div class=markdown><h2 id=前言>前言</h2><p>Hystrix已经不在维护了,但是成功的开源项目总是值得学习的.刚开始看 Hystrix 源码时,会发现一堆 Action,Function 的逻辑,这其实就是 RxJava 的特点了&ndash;<strong>响应式编程</strong>.上篇文章已经对RxJava作过<a href=/2019/rxjava-guide/>入门介绍</a>,不熟悉的同学可以先去看看.本文会简单介绍 Hystrix,再根据demo结合源码来了解Hystrix的执行流程.</p><h2 id=hystrix简单介绍>Hystrix简单介绍</h2><ol><li><p>什么是 Hystrix?</p><p>Hystrix 是一个<strong>延迟</strong>和<strong>容错库</strong>，旨在隔离对远程系统、服务和第三方库的访问点，停止级联故障，并在错误不可避免的复杂分布式系统中能够弹性恢复。</p></li><li><p>核心概念</p><ol><li><p><strong>Command</strong> 命令</p><p><strong>Command</strong> 是Hystrix的入口,对用户来说,我们只需要创建对应的 command,将需要保护的接口包装起来就可以.可以无需关注再之后的逻辑.与 Spring 深度集成后还可以通过注解的方式,就更加对开发友好了.</p></li><li><p><strong>Circuit Breaker</strong> 断路器</p><p><strong>断路器</strong>,是从电气领域引申过来的概念,具有<strong>过载</strong>、<strong>短路</strong>和<strong>欠电压保护</strong>功能，有保护线路和电源的能力.在Hystrix中即为当请求超过一定比例响应失败时,hystrix 会对请求进行拦截处理,保证服务的稳定性,以及防止出现服务之间级联雪崩的可能性.</p></li><li><p><strong>Isolation</strong> 隔离策略</p><p>隔离策略是 Hystrix 的设计亮点所在,利用<a href=https://docs.microsoft.com/en-us/azure/architecture/patterns/bulkhead>舱壁模式</a>的思想来对访问的资源进行隔离,每个资源是独立的依赖,单个资源的异常不应该影响到其他. Hystrix 的隔离策略目前有两种:<strong>线程池隔离</strong>,<strong>信号量隔离</strong>.</p></li></ol><p><img src=https://github.com/Netflix/Hystrix/wiki/images/soa-5-isolation-focused-640.png alt=isolation></p></li><li><p>Hystrix的运行流程</p></li></ol><blockquote><p>官方的 <a href=https://github.com/Netflix/Hystrix/wiki/How-it-Works>How it Works</a> 对流程有很详细的介绍,图示清晰,相信看完流程图就能对运行流程有一定的了解.</p></blockquote><p><img src=https://raw.githubusercontent.com/wiki/Netflix/Hystrix/images/hystrix-command-flow-chart.png alt=来自hystrix的github站点></p><h2 id=一次command执行>一次Command执行</h2><p><code>HystrixCommand</code>是标准的<a href=https://design-patterns.readthedocs.io/zh_CN/latest/behavioral_patterns/command.html>命令模式</a>实现,每一次请求即为一次命令的创建执行经历的过程.从上述<a href=#Hystrix简单介绍>Hystrix流程图</a>可以看出创建流程最终会指向<code>toObservable</code>,在之前<a href=/2019/rxjava-guide/>RxJava入门</a>时有介绍到<code>Observable</code>即为被观察者,作用是发送数据给观察者进行相应的,因此可以知道这个方法应该是较为关键的.</p><h3 id=uml>UML</h3><p><img src=https://i.loli.net/2019/08/29/gVF4dlR6tivBcT8.png alt=hystrixcommman-uml.png></p><ol><li>HystrixInvokable 标记这个一个可执行的接口,没有任何抽象方法或常量</li><li>HystrixExecutable 是为<code>HystrixCommand</code>设计的接口,主要提供执行命令的抽象方法,例如:<code>execute()</code>,<code>queue()</code>,<code>observe()</code></li><li>HystrixObservable 是为<code>Observable</code>设计的接口,主要提供自动订阅(<code>observe()</code>)和生成Observable(<code>toObservable()</code>)的抽象方法</li><li>HystrixInvokableInfo 提供大量的状态查询(获取属性配置,是否开启断路器等)</li><li>AbstractCommand <strong>核心逻辑</strong>的实现</li><li>HystrixCommand 定制逻辑实现以及留给用户实现的接口(比如:<code>run()</code>)</li></ol><h3 id=样例代码>样例代码</h3><p>通过新建一个 command 来看 Hystrix 是如何创建并执行的.HystrixCommand 是一个抽象类,其中有一个<code>run</code>方法需要我们实现自己的业务逻辑,以下是偷懒采用匿名内部类的形式呈现.构造方法的内部实现我们就不关注了,直接看下执行的逻辑吧.</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java>HystrixCommand <span style=color:#268bd2>demo</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> HystrixCommand<span style=color:#719e07>&lt;</span>String<span style=color:#719e07>&gt;</span>(HystrixCommandGroupKey.Factory.asKey(<span style=color:#2aa198>&#34;demo-group&#34;</span>)) {
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>protected</span> <span style=color:#268bd2>String</span> run() {
+                <span style=color:#719e07>return</span> <span style=color:#2aa198>&#34;Hello World~&#34;</span>;
+            }
+        };
+demo.execute();</code></pre></div><h3 id=执行过程>执行过程</h3><h4 id=流程图>流程图</h4><p><img src=https://raw.githubusercontent.com/wiki/Netflix/Hystrix/images/hystrix-return-flow.png alt=execute></p><p>这是官方给出的一次完整调用的链路.上述的 demo 中我们直接调用了<code>execute</code>方法,所以调用的路径为<code>execute() -&gt; queue() -&gt; toObservable() -&gt; toBlocking() -&gt; toFuture() -&gt; get()</code>.核心的逻辑其实就在<code>toObservable()</code>中.</p><h4 id=hystrixcommand-java>HystrixCommand.java</h4><h5 id=execute>execute</h5><p><code>execute</code>方法为同步调用返回结果,并对异常作处理.内部会调用<code>queue</code></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>// 同步调用执行
+</span><span style=color:#586e75></span><span style=color:#268bd2>public</span> <span style=color:#268bd2>R</span> execute() {
+  <span style=color:#719e07>try</span> {
+    <span style=color:#586e75>// queue()返回的是Future类型的对象,所以这里是阻塞get
+</span><span style=color:#586e75></span>    <span style=color:#719e07>return</span> queue().get();
+  } <span style=color:#719e07>catch</span> (Exception <span style=color:#268bd2>e</span>) {
+    <span style=color:#719e07>throw</span> decomposeException(e);
+  }
+}</code></pre></div><h5 id=queue>queue</h5><p><code>queue</code>的第一行代码完成了核心的订阅逻辑.</p><ol><li><code>toObservable()</code> 生成了 Hystrix 的 Observable 对象</li><li>将 <code>Observable</code> 转换为 <code>BlockingObservable</code> 可以阻塞控制数据发送</li><li><p><code>toFuture</code> 实现对 <code>BlockingObservable</code> 的订阅</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>Future</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>queue</span>() {
+<span style=color:#586e75>// 着重关注的是这行代码
+</span><span style=color:#586e75>// 完成了Observable的创建及订阅
+</span><span style=color:#586e75>// toBlocking()是将Observable转为BlockingObservable,转换后的Observable可以阻塞数据的发送
+</span><span style=color:#586e75></span><span style=color:#268bd2>final</span> <span style=color:#268bd2>Future</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>delegate</span> <span style=color:#719e07>=</span> toObservable().toBlocking().toFuture();
+
+<span style=color:#268bd2>final</span> <span style=color:#268bd2>Future</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>f</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Future<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span>() {
+<span style=color:#586e75>// 由于toObservable().toBlocking().toFuture()返回的Future如果中断了,
+</span><span style=color:#586e75>// 不会对当前线程进行中断,所以这里将返回的Future进行了再次包装,处理异常逻辑
+</span><span style=color:#586e75></span>...
+}
+
+<span style=color:#586e75>// 判断是否已经结束了,有异常则直接抛出
+</span><span style=color:#586e75></span><span style=color:#719e07>if</span> (f.isDone()) {
+<span style=color:#719e07>try</span> {
+  f.get();
+  <span style=color:#719e07>return</span> f;
+} <span style=color:#719e07>catch</span> (Exception <span style=color:#268bd2>e</span>) {
+			<span style=color:#586e75>// 省略这段判断
+</span><span style=color:#586e75></span>}
+}
+
+<span style=color:#719e07>return</span> f;
+}</code></pre></div></li></ol><h4 id=blockingobservable-java>BlockingObservable.java</h4><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>// 被包装的Observable
+</span><span style=color:#586e75></span><span style=color:#268bd2>private</span> <span style=color:#268bd2>final</span> Observable<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>extends</span> <span style=color:#268bd2>T</span><span style=color:#719e07>&gt;</span> o;
+
+<span style=color:#586e75>// toBlocking()会调用该静态方法将 源Observable简单包装成BlockingObservable
+</span><span style=color:#586e75></span><span style=color:#268bd2>public</span> <span style=color:#268bd2>static</span> <span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>BlockingObservable</span><span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>from</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>extends</span> <span style=color:#268bd2>T</span><span style=color:#719e07>&gt;</span> o) {
+  <span style=color:#719e07>return</span> <span style=color:#719e07>new</span> BlockingObservable<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>(o);
+}
+
+<span style=color:#268bd2>public</span> <span style=color:#268bd2>Future</span><span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>toFuture</span>() {
+  <span style=color:#719e07>return</span> BlockingOperatorToFuture.toFuture((Observable<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>)o);
+}</code></pre></div><h4 id=blockingoperatortofuture-java>BlockingOperatorToFuture.java</h4><blockquote><p><a href=http://reactivex.io/documentation/operators/to.html>ReactiveX 关于toFuture的解读</a></p><p>The <code>toFuture</code> operator applies to the <code>BlockingObservable</code> subclass, so in order to use it, you must first convert your source Observable into a <code>BlockingObservable</code> by means of either the <code>BlockingObservable.from</code> method or the <code>Observable.toBlocking</code> operator.</p></blockquote><p><code>toFuture</code>只能作用于<code>BlockingObservable</code>所以也才会有上文想要转换为BlockingObservable的操作</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>// 该操作将 源Observable转换为返回单个数据项的Future
+</span><span style=color:#586e75></span><span style=color:#268bd2>public</span> <span style=color:#268bd2>static</span> <span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>Future</span><span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>toFuture</span>(Observable<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>extends</span> <span style=color:#268bd2>T</span><span style=color:#719e07>&gt;</span> that) {
+  	<span style=color:#586e75>// CountDownLatch 判断是否完成
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>CountDownLatch</span> finished <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> CountDownLatch(1);
+  	<span style=color:#586e75>// 存储执行结果
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>AtomicReference</span><span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>value</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> AtomicReference<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>();
+  	<span style=color:#586e75>// 存储错误结果
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>AtomicReference</span><span style=color:#719e07>&lt;</span>Throwable<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>error</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> AtomicReference<span style=color:#719e07>&lt;</span>Throwable<span style=color:#719e07>&gt;</span>();
+
+  	<span style=color:#586e75>// single()方法可以限制Observable只发送单条数据
+</span><span style=color:#586e75></span>  	<span style=color:#586e75>// 如果有多条数据 会抛 IllegalArgumentException
+</span><span style=color:#586e75></span>  	<span style=color:#586e75>// 如果没有数据可以发送 会抛 NoSuchElementException
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>@SuppressWarnings</span>(<span style=color:#2aa198>&#34;unchecked&#34;</span>)
+    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Subscription</span> s <span style=color:#719e07>=</span> ((Observable<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>)that).single().subscribe(<span style=color:#719e07>new</span> Subscriber<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>() {
+				<span style=color:#586e75>// single()返回的Observable就可以对其进行标准的处理了
+</span><span style=color:#586e75></span>        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onCompleted() {
+            finished.countDown();
+        }
+
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onError(Throwable <span style=color:#268bd2>e</span>) {
+            error.compareAndSet(<span style=color:#cb4b16>null</span>, e);
+            finished.countDown();
+        }
+
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> onNext(T <span style=color:#268bd2>v</span>) {
+            <span style=color:#586e75>// &#34;single&#34; guarantees there is only one &#34;onNext&#34;
+</span><span style=color:#586e75></span>            value.set(v);
+        }
+    });
+		
+  	<span style=color:#586e75>// 最后将Subscription返回的数据封装成Future,实现对应的逻辑
+</span><span style=color:#586e75></span>    <span style=color:#719e07>return</span> <span style=color:#719e07>new</span> Future<span style=color:#719e07>&lt;</span>T<span style=color:#719e07>&gt;</span>() {
+			<span style=color:#586e75>// 可以查看源码
+</span><span style=color:#586e75></span>    };
+
+}</code></pre></div><h4 id=abstractcommand-java>AbstractCommand.java</h4><p><code>AbstractCommand</code>是<code>toObservable</code>实现的地方,属于Hystrix的核心逻辑,代码较长,可以和方法调用的流程图一起食用.<code>toObservable</code>主要是完成缓存和创建Observable,requestLog的逻辑,当第一次创建Observable时,<code>applyHystrixSemantics</code>方法是Hystrix的语义实现,可以跳着看.</p><blockquote><p><strong>tips</strong>: 下文中有很多 Action和 Function,他们很相似,都有call方法,但是区别在于Function有返回值,而Action没有,方法后跟着的数字代表有几个入参.Func0/Func3即没有入参和有三个入参</p></blockquote><h5 id=toobservable>toObservable</h5><p><code>toObservable</code>代码较长且分层还是清晰的,所以下面一块一块写.其逻辑和文章开始提到的<a href=#Hystrix简单介绍>Hystrix流程图</a>是完全一致的.</p><p><img src=https://i.loli.net/2019/09/02/CpGLzZtPXHuwsv8.png alt=toObservable.png></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>toObservable</span>() {
+    <span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span> <span style=color:#719e07>=</span> <span style=color:#719e07>this</span>;
+  	<span style=color:#586e75>// 此处省略掉了很多个Action和Function,大部分是来做扫尾清理的函数,所以用到的时候再说
+</span><span style=color:#586e75></span>  
+  	<span style=color:#586e75>// defer在上篇rxjava入门中提到过,是一种创建型的操作符,每次订阅时会产生新的Observable,回调方法中所实现的才是真正我们需要的Observable
+</span><span style=color:#586e75></span>    <span style=color:#719e07>return</span> Observable.defer(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>() {
+          	
+						<span style=color:#586e75>// 校验命令的状态,保证其只执行一次
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (<span style=color:#719e07>!</span>commandState.compareAndSet(CommandState.NOT_STARTED, CommandState.OBSERVABLE_CHAIN_CREATED)) {
+                IllegalStateException <span style=color:#268bd2>ex</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> IllegalStateException(<span style=color:#2aa198>&#34;This instance can only be executed once. Please instantiate a new instance.&#34;</span>);
+                <span style=color:#586e75>//TODO make a new error type for this
+</span><span style=color:#586e75></span>                <span style=color:#719e07>throw</span> <span style=color:#719e07>new</span> HystrixRuntimeException(FailureType.BAD_REQUEST_EXCEPTION, _cmd.getClass(), getLogMessagePrefix() <span style=color:#719e07>+</span> <span style=color:#2aa198>&#34; command executed multiple times - this is not permitted.&#34;</span>, ex, <span style=color:#cb4b16>null</span>);
+            }
+
+            commandStartTimestamp <span style=color:#719e07>=</span> System.currentTimeMillis();
+						<span style=color:#586e75>// properties为当前command的所有属性
+</span><span style=color:#586e75></span>          	<span style=color:#586e75>// 允许记录请求log时会保存当前执行的command
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (properties.requestLogEnabled().get()) {
+                <span style=color:#586e75>// log this command execution regardless of what happened
+</span><span style=color:#586e75></span>                <span style=color:#719e07>if</span> (currentRequestLog <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+                    currentRequestLog.addExecutedCommand(_cmd);
+                }
+            }
+						
+          	<span style=color:#586e75>// 是否开启了请求缓存
+</span><span style=color:#586e75></span>            <span style=color:#268bd2>final</span> <span style=color:#268bd2>boolean</span> requestCacheEnabled <span style=color:#719e07>=</span> isRequestCachingEnabled();
+          	<span style=color:#586e75>// 获取缓存key
+</span><span style=color:#586e75></span>            <span style=color:#268bd2>final</span> <span style=color:#268bd2>String</span> cacheKey <span style=color:#719e07>=</span> getCacheKey();
+
+            <span style=color:#586e75>// 开启缓存后,尝试从缓存中取
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (requestCacheEnabled) {
+                HystrixCommandResponseFromCache<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>fromCache</span> <span style=color:#719e07>=</span> (HystrixCommandResponseFromCache<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span>) requestCache.get(cacheKey);
+                <span style=color:#719e07>if</span> (fromCache <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+                    isResponseFromCache <span style=color:#719e07>=</span> <span style=color:#cb4b16>true</span>;
+                    <span style=color:#719e07>return</span> handleRequestCacheHitAndEmitValues(fromCache, _cmd);
+                }
+            }
+          	<span style=color:#586e75>// 没有开启请求缓存时,就执行正常的逻辑
+</span><span style=color:#586e75></span>            Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>hystrixObservable</span> <span style=color:#719e07>=</span>
+              			<span style=color:#586e75>// 这里又通过defer创建了我们需要的Observable
+</span><span style=color:#586e75></span>                    Observable.defer(applyHystrixSemantics)
+              							<span style=color:#586e75>// 发送前会先走一遍hook,默认executionHook是空实现的,所以这里就跳过了
+</span><span style=color:#586e75></span>                            .map(wrapWithAllOnNextHooks);
+          
+            <span style=color:#586e75>// 得到最后的封装好的Observable后,将其放入缓存
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (requestCacheEnabled <span style=color:#719e07>&amp;&amp;</span> cacheKey <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+                <span style=color:#586e75>// wrap it for caching
+</span><span style=color:#586e75></span>                HystrixCachedObservable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>toCache</span> <span style=color:#719e07>=</span> HystrixCachedObservable.from(hystrixObservable, _cmd);
+                HystrixCommandResponseFromCache<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>fromCache</span> <span style=color:#719e07>=</span> (HystrixCommandResponseFromCache<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span>) requestCache.putIfAbsent(cacheKey, toCache);
+                <span style=color:#719e07>if</span> (fromCache <span style=color:#719e07>!=</span> <span style=color:#cb4b16>null</span>) {
+                    <span style=color:#586e75>// another thread beat us so we&#39;ll use the cached value instead
+</span><span style=color:#586e75></span>                    toCache.unsubscribe();
+                    isResponseFromCache <span style=color:#719e07>=</span> <span style=color:#cb4b16>true</span>;
+                    <span style=color:#719e07>return</span> handleRequestCacheHitAndEmitValues(fromCache, _cmd);
+                } <span style=color:#719e07>else</span> {
+                    <span style=color:#586e75>// we just created an ObservableCommand so we cast and return it
+</span><span style=color:#586e75></span>                    afterCache <span style=color:#719e07>=</span> toCache.toObservable();
+                }
+            } <span style=color:#719e07>else</span> {
+                afterCache <span style=color:#719e07>=</span> hystrixObservable;
+            }
+
+            <span style=color:#719e07>return</span> afterCache
+              			<span style=color:#586e75>// 终止时的操作
+</span><span style=color:#586e75></span>                    .doOnTerminate(terminateCommandCleanup)     <span style=color:#586e75>// perform cleanup once (either on normal terminal state (this line), or unsubscribe (next line))
+</span><span style=color:#586e75></span>              			<span style=color:#586e75>// 取消订阅时的操作
+</span><span style=color:#586e75></span>                    .doOnUnsubscribe(unsubscribeCommandCleanup) <span style=color:#586e75>// perform cleanup once
+</span><span style=color:#586e75></span>              			<span style=color:#586e75>// 完成时的操作
+</span><span style=color:#586e75></span>                    .doOnCompleted(fireOnCompletedHook);
+        }
+    }
+                     </code></pre></div><h5 id=handlerequestcachehitandemitvalues>handleRequestCacheHitAndEmitValues</h5><p>缓存击中时的处理</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>private</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>handleRequestCacheHitAndEmitValues</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>HystrixCommandResponseFromCache</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>fromCache</span>, <span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span>) {
+        <span style=color:#719e07>try</span> {
+          	<span style=color:#586e75>// Hystrix中有大量的hook 如果有心做二次开发的,可以利用这些hook做到很完善的监控
+</span><span style=color:#586e75></span>            executionHook.onCacheHit(<span style=color:#719e07>this</span>);
+        } <span style=color:#719e07>catch</span> (Throwable <span style=color:#268bd2>hookEx</span>) {
+            logger.warn(<span style=color:#2aa198>&#34;Error calling HystrixCommandExecutionHook.onCacheHit&#34;</span>, hookEx);
+        }   
+  <span style=color:#586e75>// 将缓存的结果赋给当前command
+</span><span style=color:#586e75></span>	<span style=color:#719e07>return</span> fromCache.toObservableWithStateCopiedInto(<span style=color:#719e07>this</span>)
+    				<span style=color:#586e75>// doOnTerminate 或者是后面看到的doOnUnsubscribe,doOnError,都指的是在响应onTerminate/onUnsubscribe/onError后的操作,即在Observable的生命周期上注册一个动作优雅的处理逻辑
+</span><span style=color:#586e75></span>            .doOnTerminate(<span style=color:#719e07>new</span> Action0() {
+                <span style=color:#268bd2>@Override</span>
+                <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call() {
+                  	<span style=color:#586e75>// 命令最终状态的不同进行不同处理
+</span><span style=color:#586e75></span>                    <span style=color:#719e07>if</span> (commandState.compareAndSet(CommandState.OBSERVABLE_CHAIN_CREATED, CommandState.TERMINAL)) {
+                        cleanUpAfterResponseFromCache(<span style=color:#cb4b16>false</span>); <span style=color:#586e75>//user code never ran
+</span><span style=color:#586e75></span>                    } <span style=color:#719e07>else</span> <span style=color:#719e07>if</span> (commandState.compareAndSet(CommandState.USER_CODE_EXECUTED, CommandState.TERMINAL)) {
+                        cleanUpAfterResponseFromCache(<span style=color:#cb4b16>true</span>); <span style=color:#586e75>//user code did run
+</span><span style=color:#586e75></span>                    }
+                }
+            })
+            .doOnUnsubscribe(<span style=color:#719e07>new</span> Action0() {
+                <span style=color:#268bd2>@Override</span>
+                <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call() {
+	                  <span style=color:#586e75>// 命令最终状态的不同进行不同处理
+</span><span style=color:#586e75></span>                    <span style=color:#719e07>if</span> (commandState.compareAndSet(CommandState.OBSERVABLE_CHAIN_CREATED, CommandState.UNSUBSCRIBED)) {
+                        cleanUpAfterResponseFromCache(<span style=color:#cb4b16>false</span>); <span style=color:#586e75>//user code never ran
+</span><span style=color:#586e75></span>                    } <span style=color:#719e07>else</span> <span style=color:#719e07>if</span> (commandState.compareAndSet(CommandState.USER_CODE_EXECUTED, CommandState.UNSUBSCRIBED)) {
+                        cleanUpAfterResponseFromCache(<span style=color:#cb4b16>true</span>); <span style=color:#586e75>//user code did run
+</span><span style=color:#586e75></span>                    }
+                }
+            });
+}       </code></pre></div><h5 id=applyhystrixsemantics>applyHystrixSemantics</h5><p>因为本片文章的主要目的是在讲执行流程,所以失败回退和断路器相关的就留到以后的文章中再写.</p><p><img src=https://i.loli.net/2019/09/02/M3djoYyUaVGFptB.png alt=applyHystrixSemantics.png></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>final</span> <span style=color:#268bd2>Func0</span><span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span> <span style=color:#268bd2>applyHystrixSemantics</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>() {
+      	<span style=color:#586e75>// 不再订阅了就返回不发送数据的Observable
+</span><span style=color:#586e75></span>        <span style=color:#719e07>if</span> (commandState.get().equals(CommandState.UNSUBSCRIBED)) {
+          	<span style=color:#586e75>// 不发送任何数据或通知
+</span><span style=color:#586e75></span>            <span style=color:#719e07>return</span> Observable.never();
+        }
+        <span style=color:#719e07>return</span> applyHystrixSemantics(_cmd);
+    }
+};
+
+<span style=color:#268bd2>private</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>applyHystrixSemantics</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span>) {
+	<span style=color:#586e75>// 标记开始执行的hook
+</span><span style=color:#586e75></span>  <span style=color:#586e75>// 如果hook内抛异常了,会快速失败且没有fallback处理
+</span><span style=color:#586e75></span>  executionHook.onStart(_cmd);
+
+  <span style=color:#586e75>/* determine if we&#39;re allowed to execute */</span>
+  <span style=color:#586e75>// 断路器核心逻辑: 判断是否允许执行(TODO)
+</span><span style=color:#586e75></span>  <span style=color:#719e07>if</span> (circuitBreaker.allowRequest()) {
+    <span style=color:#586e75>// Hystrix自己造的信号量轮子,之所以不用juc下,官方解释为juc的Semphore实现太复杂,而且没有动态调节的信号量大小的能力,简而言之,不满足需求!
+</span><span style=color:#586e75></span>    <span style=color:#586e75>// 根据不同隔离策略(线程池隔离/信号量隔离)获取不同的TryableSemphore
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>TryableSemaphore</span> executionSemaphore <span style=color:#719e07>=</span> getExecutionSemaphore();
+    <span style=color:#586e75>// Semaphore释放标志
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>AtomicBoolean</span> semaphoreHasBeenReleased <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> AtomicBoolean(<span style=color:#cb4b16>false</span>);
+    
+    <span style=color:#586e75>// 释放信号量的Action
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Action0</span> singleSemaphoreRelease <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Action0() {
+      <span style=color:#268bd2>@Override</span>
+      <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call() {
+        <span style=color:#719e07>if</span> (semaphoreHasBeenReleased.compareAndSet(<span style=color:#cb4b16>false</span>, <span style=color:#cb4b16>true</span>)) {
+          executionSemaphore.release();
+        }
+      }
+    };
+
+    <span style=color:#586e75>// 异常处理
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Action1</span><span style=color:#719e07>&lt;</span>Throwable<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>markExceptionThrown</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>Throwable<span style=color:#719e07>&gt;</span>() {
+      <span style=color:#268bd2>@Override</span>
+      <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Throwable <span style=color:#268bd2>t</span>) {
+        <span style=color:#586e75>// HystrixEventNotifier是hystrix的插件,不同的事件发送不同的通知,默认是空实现.
+</span><span style=color:#586e75></span>        eventNotifier.markEvent(HystrixEventType.EXCEPTION_THROWN, commandKey);
+      }
+    };
+		
+    <span style=color:#586e75>// 线程池隔离的TryableSemphore始终为true
+</span><span style=color:#586e75></span>    <span style=color:#719e07>if</span> (executionSemaphore.tryAcquire()) {
+      <span style=color:#719e07>try</span> {
+        <span style=color:#586e75>/* used to track userThreadExecutionTime */</span>
+        <span style=color:#586e75>// executionResult是一次命令执行的结果信息封装
+</span><span style=color:#586e75></span>        <span style=color:#586e75>// 这里设置起始时间是为了记录命令的生命周期,执行过程中会set其他属性进去
+</span><span style=color:#586e75></span>        executionResult <span style=color:#719e07>=</span> executionResult.setInvocationStartTime(System.currentTimeMillis());
+        <span style=color:#719e07>return</span> executeCommandAndObserve(_cmd)
+          <span style=color:#586e75>// 报错时的处理
+</span><span style=color:#586e75></span>          .doOnError(markExceptionThrown)
+          <span style=color:#586e75>// 终止时释放
+</span><span style=color:#586e75></span>          .doOnTerminate(singleSemaphoreRelease)
+          <span style=color:#586e75>// 取消订阅时释放
+</span><span style=color:#586e75></span>          .doOnUnsubscribe(singleSemaphoreRelease);
+      } <span style=color:#719e07>catch</span> (RuntimeException <span style=color:#268bd2>e</span>) {
+        <span style=color:#719e07>return</span> Observable.error(e);
+      }
+    } <span style=color:#719e07>else</span> {
+      <span style=color:#586e75>// tryAcquire失败后会做fallback处理,TODO
+</span><span style=color:#586e75></span>      <span style=color:#719e07>return</span> handleSemaphoreRejectionViaFallback();
+    }
+  } <span style=color:#719e07>else</span> {
+    <span style=color:#586e75>// 断路器短路(拒绝请求)fallback处理 TODO
+</span><span style=color:#586e75></span>    <span style=color:#719e07>return</span> handleShortCircuitViaFallback();
+  }
+}</code></pre></div><h5 id=executecommandandobserve>executeCommandAndObserve</h5><p><img src=https://i.loli.net/2019/09/02/qjDKmSk7QWUvO8X.png alt=executeCommandAndObserve.png></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#586e75>/**
+</span><span style=color:#586e75> * 执行run方法的地方
+</span><span style=color:#586e75> */</span>
+<span style=color:#268bd2>private</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>executeCommandAndObserve</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span>) {
+  	<span style=color:#586e75>// 获取当前上下文
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>HystrixRequestContext</span> currentRequestContext <span style=color:#719e07>=</span> HystrixRequestContext.getContextForCurrentThread();
+
+  	<span style=color:#586e75>// 发送数据时的Action响应
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Action1</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>markEmits</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span>() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(R <span style=color:#268bd2>r</span>) {
+          	<span style=color:#586e75>// 如果onNext时需要上报时,做以下处理
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (shouldOutputOnNextEvents()) {
+              	<span style=color:#586e75>// result标记
+</span><span style=color:#586e75></span>                executionResult <span style=color:#719e07>=</span> executionResult.addEvent(HystrixEventType.EMIT);
+              	<span style=color:#586e75>// 通知
+</span><span style=color:#586e75></span>                eventNotifier.markEvent(HystrixEventType.EMIT, commandKey);
+            }
+          	<span style=color:#586e75>// commandIsScalar是一个我不解的地方,在网上也没有查到好的解释
+</span><span style=color:#586e75></span>          	<span style=color:#586e75>// 该方法为抽象方法,有HystrixCommand实现返回true.HystrixObservableCommand返回false
+</span><span style=color:#586e75></span>            <span style=color:#719e07>if</span> (commandIsScalar()) {
+              	<span style=color:#586e75>// 耗时
+</span><span style=color:#586e75></span>                <span style=color:#dc322f>long</span> <span style=color:#268bd2>latency</span> <span style=color:#719e07>=</span> System.currentTimeMillis() <span style=color:#719e07>-</span> executionResult.getStartTimestamp();
+              	<span style=color:#586e75>// 通知
+</span><span style=color:#586e75></span>                eventNotifier.markCommandExecution(getCommandKey(), properties.executionIsolationStrategy().get(), (<span style=color:#dc322f>int</span>) latency, executionResult.getOrderedList());
+                eventNotifier.markEvent(HystrixEventType.SUCCESS, commandKey);
+                executionResult <span style=color:#719e07>=</span> executionResult.addEvent((<span style=color:#dc322f>int</span>) latency, HystrixEventType.SUCCESS);
+              	<span style=color:#586e75>// 断路器标记成功(断路器半开时的反馈,决定是否关闭断路器)
+</span><span style=color:#586e75></span>                circuitBreaker.markSuccess();
+            }
+        }
+    };
+
+    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Action0</span> markOnCompleted <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Action0() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call() {
+            <span style=color:#719e07>if</span> (<span style=color:#719e07>!</span>commandIsScalar()) {
+							<span style=color:#586e75>// 同markEmits 类似处理
+</span><span style=color:#586e75></span>            }
+        }
+    };
+
+  	<span style=color:#586e75>// 失败回退的逻辑
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Func1</span><span style=color:#719e07>&lt;</span>Throwable, Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span> <span style=color:#268bd2>handleFallback</span> <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Func1<span style=color:#719e07>&lt;</span>Throwable, Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>(Throwable <span style=color:#268bd2>t</span>) {
+          <span style=color:#586e75>// 不是重点略过了
+</span><span style=color:#586e75></span>        }
+    };
+
+  	<span style=color:#586e75>// 请求上下文的处理
+</span><span style=color:#586e75></span>    <span style=color:#268bd2>final</span> <span style=color:#268bd2>Action1</span><span style=color:#719e07>&lt;</span>Notification<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>super</span> <span style=color:#268bd2>R</span><span style=color:#719e07>&gt;&gt;</span> setRequestContext <span style=color:#719e07>=</span> <span style=color:#719e07>new</span> Action1<span style=color:#719e07>&lt;</span>Notification<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>super</span> <span style=color:#268bd2>R</span><span style=color:#719e07>&gt;&gt;</span>() {
+        <span style=color:#268bd2>@Override</span>
+        <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call(Notification<span style=color:#719e07>&lt;?</span> <span style=color:#268bd2>super</span> <span style=color:#268bd2>R</span><span style=color:#719e07>&gt;</span> rNotification) {
+            setRequestContextIfNeeded(currentRequestContext);
+        }
+    };
+
+    Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>execution</span>;
+  	<span style=color:#586e75>// 如果有执行超时限制,会将包装后的Observable再转变为支持TimeOut的
+</span><span style=color:#586e75></span>    <span style=color:#719e07>if</span> (properties.executionTimeoutEnabled().get()) {
+      	<span style=color:#586e75>// 根据不同的隔离策略包装为不同的Observable
+</span><span style=color:#586e75></span>        execution <span style=color:#719e07>=</span> executeCommandWithSpecifiedIsolation(_cmd)
+          			<span style=color:#586e75>// lift 是rxjava中一种基本操作符 可以将Observable转换成另一种Observable
+</span><span style=color:#586e75></span>          			<span style=color:#586e75>// 包装为带有超时限制的Observable
+</span><span style=color:#586e75></span>                .lift(<span style=color:#719e07>new</span> HystrixObservableTimeoutOperator<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span>(_cmd));
+    } <span style=color:#719e07>else</span> {
+        execution <span style=color:#719e07>=</span> executeCommandWithSpecifiedIsolation(_cmd);
+    }
+
+    <span style=color:#719e07>return</span> execution.doOnNext(markEmits)
+            .doOnCompleted(markOnCompleted)
+            .onErrorResumeNext(handleFallback)
+            .doOnEach(setRequestContext);
+}</code></pre></div><h5 id=executecommandwithspecifiedisolation>executeCommandWithSpecifiedIsolation</h5><p>根据不同的隔离策略创建不同的执行<code>Observable</code></p><p><img src=https://i.loli.net/2019/09/02/GCKHtruabSk3FDA.png alt=executeCommandSpecfi.png></p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>private</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>executeCommandWithSpecifiedIsolation</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span>) {
+    <span style=color:#719e07>if</span> (properties.executionIsolationStrategy().get() <span style=color:#719e07>==</span> ExecutionIsolationStrategy.THREAD) {
+        <span style=color:#586e75>// mark that we are executing in a thread (even if we end up being rejected we still were a THREAD execution and not SEMAPHORE)
+</span><span style=color:#586e75></span>        <span style=color:#719e07>return</span> Observable.defer(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+            <span style=color:#268bd2>@Override</span>
+            <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>() {
+              	<span style=color:#586e75>// 由于源码太长,这里只关注正常的流程,需要详细了解可以去看看源码
+</span><span style=color:#586e75></span>                <span style=color:#719e07>if</span> (threadState.compareAndSet(ThreadState.NOT_USING_THREAD, ThreadState.STARTED)) {
+                    <span style=color:#719e07>try</span> {
+                        <span style=color:#719e07>return</span> getUserExecutionObservable(_cmd);
+                    } <span style=color:#719e07>catch</span> (Throwable <span style=color:#268bd2>ex</span>) {
+                        <span style=color:#719e07>return</span> Observable.error(ex);
+                    }
+                } <span style=color:#719e07>else</span> {
+                    <span style=color:#586e75>//command has already been unsubscribed, so return immediately
+</span><span style=color:#586e75></span>                    <span style=color:#719e07>return</span> Observable.error(<span style=color:#719e07>new</span> RuntimeException(<span style=color:#2aa198>&#34;unsubscribed before executing run()&#34;</span>));
+                }
+            }})
+        .doOnTerminate(<span style=color:#719e07>new</span> Action0() {})
+        .doOnUnsubscribe(<span style=color:#719e07>new</span> Action0() {})
+        <span style=color:#586e75>// 指定在某一个线程上执行,是rxjava中很重要的线程调度的概念
+</span><span style=color:#586e75></span>        .subscribeOn(threadPool.getScheduler(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Boolean<span style=color:#719e07>&gt;</span>() {
+        }));
+    } <span style=color:#719e07>else</span> { <span style=color:#586e75>// 信号量隔离策略
+</span><span style=color:#586e75></span>        <span style=color:#719e07>return</span> Observable.defer(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+						<span style=color:#586e75>// 逻辑与线程池大致相同
+</span><span style=color:#586e75></span>        });
+    }
+}</code></pre></div><h5 id=getuserexecutionobservable>getUserExecutionObservable</h5><p>获取用户执行的逻辑</p><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>private</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>getUserExecutionObservable</span>(<span style=color:#268bd2>final</span> <span style=color:#268bd2>AbstractCommand</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>_cmd</span>) {
+    Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>userObservable</span>;
+
+    <span style=color:#719e07>try</span> {
+      	<span style=color:#586e75>// getExecutionObservable是抽象方法,有HystrixCommand自行实现
+</span><span style=color:#586e75></span>        userObservable <span style=color:#719e07>=</span> getExecutionObservable();
+    } <span style=color:#719e07>catch</span> (Throwable <span style=color:#268bd2>ex</span>) {
+        <span style=color:#586e75>// the run() method is a user provided implementation so can throw instead of using Observable.onError
+</span><span style=color:#586e75></span>        <span style=color:#586e75>// so we catch it here and turn it into Observable.error
+</span><span style=color:#586e75></span>        userObservable <span style=color:#719e07>=</span> Observable.error(ex);
+    }
+		<span style=color:#586e75>// 将Observable作其他中转
+</span><span style=color:#586e75></span>    <span style=color:#719e07>return</span> userObservable
+            .lift(<span style=color:#719e07>new</span> ExecutionHookApplication(_cmd))
+            .lift(<span style=color:#719e07>new</span> DeprecatedOnRunHookApplication(_cmd));
+}</code></pre></div><p><strong>lift操作符</strong></p><p>lift可以转换成一个新的Observable,它很像一个代理,将原来的Observable代理到自己这里,订阅时通知原来的Observable发送数据,经自己这里流转加工处理再返回给订阅者.<code>Map/FlatMap</code>操作符底层其实就是用的<code>lift</code>进行实现的.</p><h5 id=getexecutionobservable>getExecutionObservable</h5><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=color:#268bd2>@Override</span>
+<span style=color:#268bd2>final</span> <span style=color:#268bd2>protected</span> Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>getExecutionObservable</span>() {
+  <span style=color:#719e07>return</span> Observable.defer(<span style=color:#719e07>new</span> Func0<span style=color:#719e07>&lt;</span>Observable<span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;&gt;</span>() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>Observable</span><span style=color:#719e07>&lt;</span>R<span style=color:#719e07>&gt;</span> <span style=color:#268bd2>call</span>() {
+      <span style=color:#719e07>try</span> {
+        <span style=color:#586e75>// just操作符就是直接执行的Observable
+</span><span style=color:#586e75></span>        <span style=color:#586e75>// run方法就是我们实现的业务逻辑: Hello World~
+</span><span style=color:#586e75></span>        <span style=color:#719e07>return</span> Observable.just(run());
+      } <span style=color:#719e07>catch</span> (Throwable <span style=color:#268bd2>ex</span>) {
+        <span style=color:#719e07>return</span> Observable.error(ex);
+      }
+    }
+  }).doOnSubscribe(<span style=color:#719e07>new</span> Action0() {
+    <span style=color:#268bd2>@Override</span>
+    <span style=color:#268bd2>public</span> <span style=color:#268bd2>void</span> call() {
+     	<span style=color:#586e75>// 执行订阅时将执行线程记为当前线程,必要时我们可以interrupt
+</span><span style=color:#586e75></span>      executionThread.set(Thread.currentThread());
+    }
+  });
+}</code></pre></div><h2 id=总结>总结</h2><p>希望自己能把埋下的坑一一填完: 容错机制,metrics,断路器等等&hellip;</p><h2 id=参考>参考</h2><ol><li><a href=https://github.com/Netflix/Hystrix/wiki/How-it-Works>Hystrix How it Works</a></li><li><a href=http://reactivex.io/documentation/observable.html>ReactiveX官网</a></li><li><a href=https://github.com/ruanyf/document-style-guide>阮一峰: 中文技术文档写作规范</a></li><li><a href=https://blog.csdn.net/qq_24530405/article/details/66969886>RxJava lift 原理解析</a></li></ol></div><div class=post-tags><nav class="nav tags"><ul class=flat><li><a href=/tags/rxjava>rxjava</a></li><li><a href=/tags/hystrix>hystrix</a></li></ul></nav></div><script src=https://utteranc.es/client.js repo=xiaoheiAh/xiaoheiAh.github.io issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><div class="footer wrapper"><nav class=nav><div>© Copyright notice | <a href=https://github.com/vividvilla/ezhil>Ezhil theme</a> | Built with <a href=https://gohugo.io>Hugo</a></div></nav></div><script type=application/javascript>var doNotTrack=false;if(!doNotTrack){window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;ga('create','UA-98254666-1','auto');ga('send','pageview');}</script><script async src=https://www.google-analytics.com/analytics.js></script><script>feather.replace()</script></body></html>
