@@ -295,6 +295,10 @@ ul {
     margin-top: 10px;
 }
 
+.meta {
+    display: inline;
+}
+
 .post .draft-label {
     color: #a00;
     text-decoration: none;
