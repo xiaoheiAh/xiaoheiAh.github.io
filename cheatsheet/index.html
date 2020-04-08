@@ -2,7 +2,12 @@
 wget -qO- https://example.com/a.zip 
 </code></pre></div><h3 id=curl>curl</h3><blockquote><p><a href=https://www.ruanyifeng.com/blog/2019/09/curl-reference.html>https://www.ruanyifeng.com/blog/2019/09/curl-reference.html</a></p></blockquote><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#586e75># 等同于 wget 下载</span>
 curl -L -O https://example.com/a.zip 
-</code></pre></div><h2 id=常用idea快捷键>常用idea快捷键</h2><ul><li>大小写切换command shift u</li><li>surround with optioncommandt</li><li>进入实现类 optioncommandb</li><li>查找当前类中的方法和变量 commandF12</li></ul><h2 id=自定义快捷键>自定义快捷键</h2><ul><li>右键调出长下文菜单 <code>command+shift+L</code></li></ul><h2 id=git>git</h2><p>git remote prune origin</p><p>同步远程仓库,删除本地仓库中无用的分支(保持与远程仓库分支一致,远程没有的就删掉)</p><h2 id=vim>vim</h2><h3 id=移动>移动</h3><p>跳转到光标上次停留的位置(往后调)</p><p>同上(往前跳)</p><p><strong>zz</strong>: 将当前行移动到屏幕中央</p><h3 id=编辑>编辑</h3><p><strong>A</strong>: 在当前行末尾编辑</p><p><strong>I</strong>:在当前行首编辑</p><p>分别更改这些配对标点符号中的文本内容
+</code></pre></div><h2 id=常用idea快捷键>常用idea快捷键</h2><ul><li>大小写切换command shift u</li><li>surround with optioncommandt</li><li>进入实现类 optioncommandb</li><li>查找当前类中的方法和变量 commandF12</li></ul><h2 id=自定义快捷键>自定义快捷键</h2><ul><li>右键调出长下文菜单 <code>command+shift+L</code></li></ul><h2 id=git>git</h2><div class=highlight><pre style=color:#93a1a1;background-color:#002b36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#586e75># 同步远程仓库,删除本地仓库中无用的分支(保持与远程仓库分支一致,远程没有的就删掉)</span>
+git remote prune origin
+
+<span style=color:#586e75># 批量删除 利用 grep 语法以及 xargs 传参</span>
+git branch | grep <span style=color:#2aa198>&#39;匹配字符串&#39;</span> | xargs git branch -D
+</code></pre></div><h2 id=vim>vim</h2><h3 id=移动>移动</h3><p>跳转到光标上次停留的位置(往后调)</p><p>同上(往前跳)</p><p><strong>zz</strong>: 将当前行移动到屏幕中央</p><h3 id=编辑>编辑</h3><p><strong>A</strong>: 在当前行末尾编辑</p><p><strong>I</strong>:在当前行首编辑</p><p>分别更改这些配对标点符号中的文本内容
 ci’、ci”、ci(、ci[、ci{、ci&lt; -</p><p>分别删除这些配对标点符号中的文本内容
 di’、di”、di(或dib、di[、di{或diB、di&lt; -</p><p>分别复制这些配对标点符号中的文本内容
 yi’、yi”、yi(、yi[、yi{、yi&lt; -</p><p>分别选中这些配对标点符号中的文本内容
