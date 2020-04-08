@@ -1,0 +1,49 @@
+@import url('https://fonts.loli.net/css2?family=Fira+Mono&family=Bree+Serif&family=Noto+Serif+SC&display=swap');
+body {
+    font-family: "Bree Serif", "Helvetica Neue", Helvetica, "Nimbus Sans L", Arial, "Liberation Sans", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", "Source Han Sans CN", "Microsoft YaHei", "Wenquanyi Micro Hei", "WenQuanYi Zen Hei", "ST Heiti", SimHei, "WenQuanYi Zen Hei Sharp", sans-serif;
+    font-weight: 400;
+    font-display: swap;
+}
+blockquote {
+    font-size: 1rem;
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family:inherit;
+}
+h1 {
+    font-size: 2rem;
+}
+
+h2 {
+    font-size: 1.8rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.2rem;
+}
+
+h5 {
+    font-size: 1rem;
+}
+
+h6 {
+    font-size: .9rem;
+}
+code {
+    color: #4b8204;
+    font-family: inherit;
+}
+pre code {
+    color: inherit;
+    font-family: 'Fira Mono', monospace !important;
+}
+code:before, code:after {
+    content: '\`';
+}
+pre code:before, pre code:after {
+    content: '';
+}
