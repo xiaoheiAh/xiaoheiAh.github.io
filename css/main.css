@@ -344,14 +344,14 @@ ul {
 }
 
 .badge {
-    display: 'inline-flex';
-    align-items: 'center';
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .badge img{
-    display: inline-flex;
-    height: 15px;
-    margin: 0px;
+    height: 14px;
+    margin: 0px 5px 0px 0px;
     border: none;
 }
 
