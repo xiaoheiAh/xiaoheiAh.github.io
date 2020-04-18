@@ -1,9 +1,11 @@
 body {
-    font-family: sans-serif;
+    font-family: Bitter,'Noto Sans SC', -apple-system, "Helvetica Neue", Helvetica, "Nimbus Sans L", Arial, "Liberation Sans", "PingFang  SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", "Source Han Sans CN", "Microsoft     YaHei", "Wenquanyi Micro Hei", "WenQuanYi Zen Hei", "ST Heiti", SimHei, "WenQuanYi Zen Hei Sharp", sans-serif;
     font-weight: 400;
     color: #333;
-    line-height: 1.6;
+    line-height: 1.4;
     font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    font-display: swap;
 }
 
 a, a:hover {
@@ -63,8 +65,7 @@ textarea {
 blockquote {
     margin-left: 1rem;
     font-style: italic;
-    font-size: 1.4rem;
-    font-family: Georgia,bitstream charter,serif;
+    font-size: 1rem;
     border-left: 3px solid;
     border-color: #a00;
     padding-left: 20px;
@@ -89,14 +90,13 @@ a:hover {
 }
 
 h1,h2,h3,h4,h5,h6 {
-    font-family: raleway,sans-serif;
     line-height: 1.2;
     color: #333;
     font-weight: 200;
 }
 
 h1 {
-    font-size: 2.75rem;
+    font-size: 2.5rem;
 }
 
 h2 {
@@ -117,6 +117,14 @@ h5 {
 
 h6 {
     font-size: .9rem;
+}
+
+code {
+    color: #4b8204;
+}
+
+pre code {
+    color: inherit;
 }
 
 .align-center {
@@ -201,7 +209,7 @@ ul {
 }
 
 .header {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     padding-bottom: 20px;
 }
 
@@ -262,12 +270,12 @@ ul {
     font-weight: 600;
     text-transform: uppercase;
     color: #999;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     letter-spacing: 1px;
 }
 
 .recent-posts .posts .post {
-    margin-bottom: 30px;
+    margin-bottom: 10px;
 }
 
 .recent-posts .posts .post .meta,
@@ -333,6 +341,18 @@ ul {
     border-top: 1px solid #f4f4f4;
     padding: 20px 0;
     margin-top: 40px;
+}
+
+.badge {
+    display: 'inline-flex';
+    align-items: 'center';
+}
+
+.badge img{
+    display: inline-flex;
+    height: 15px;
+    margin: 0px;
+    border: none;
 }
 
 .page-title {
