@@ -1,0 +1,189 @@
+baseURL: https://xiaohei.im/hugo-theme-pure
+theme: yanto
+title: 赵小黑的博客
+defaultContentLanguage: zh
+footnoteReturnLinkContents: ↩
+hasCJKLanguage: true
+paginate: 7
+enableEmoji: true
+googleAnalytics: UA-98254666-1
+permalinks:
+  posts: /:year/:month/:filename/
+
+outputFormats:
+  SearchIndex:
+    mediaType: "application/json"
+    baseName: "searchindex"
+    isPlainText: true
+    notAlternative: true
+    
+outputs:
+    home: ["HTML","RSS","SearchIndex"]
+# sitemap
+sitemap:
+  changefreq: monthly
+  filename: sitemap.xml
+  priority: 0.5
+
+menu:
+  main:
+    - identifier: home
+      name: Home
+      title: 主页
+      url: /
+      weight: 1
+
+    - identifier: archives
+      name: Archives
+      title: 归档
+      url: /posts
+      weight: 2
+
+    - identifier: categories
+      name: Categories
+      title: 分类
+      url: /categories
+      weight: 3
+
+    - identifier: tags
+      name: Tags
+      title: 标签
+      url: /tags
+      weight: 4
+
+    - identifier: about
+      name: About
+      title: 关于
+      url: /about
+      weight: 5
+
+
+params:
+  since: 2017
+  dateFormatToUse: "2006-01-02"
+  enablePostCopyright: true
+  mainSections: ["posts"] 
+  highlightjs:
+    langs: ["rust", "java", "javascript"] #specify languages for which you want to add syntax highlight support
+  # Enable/Disable menu icons
+  menuIcons:
+    enable: true  # 是否启用导航菜单图标
+    home: icon-home-fill
+    archives: icon-archives-fill
+    categories: icon-folder
+    tags: icon-tags
+    repository: icon-project
+    books: icon-book-fill
+    links: icon-friendship
+    about: icon-cup-fill
+  # profile
+  profile:
+    enabled: true # Whether to show profile bar
+    avatar: avatar.png
+    gravatar: # Gravatar email address, if you enable Gravatar, your avatar config will be overriden
+    author: 赵小黑
+    author_title: Java Developer
+    author_description: 好好学习~天天向上~
+    location: Shanghai, China
+    follow: https://github.com/xiaoheiAh
+    # Social Links
+    social:
+      links:
+        github: https://github.com/xiaoheiAh
+        # weibo: http://weibo.com/{yourid}
+        # twitter: https://twitter.com/
+        # facebook: /
+        # dribbble: /
+        rss: /index.xml
+      link_tooltip: false # enable the social link tooltip, options: true, false
+  # Site
+  site:
+    logo:
+      enabled: true
+      width: 40
+      height: 40
+      url: favicon.ico
+    title: Hugo # 页面title
+    favicon: favicon.ico
+    board: <p>自用科学上网节点推荐(便宜又好用)<a href="https://tianlinzhao.com/aff.php?aff=4969" target="_blank" style="background-color:#FFFF00">点这里跳转</a> # 站点公告
+    copyright: true # 底部版权信息
+
+  # Share
+  # weibo,qq,qzone,wechat,tencent,douban,diandian,facebook,twitter,google,linkedin
+  share:
+    enable: true # 是否启用分享
+    sites: weibo,qq,wechat,facebook,twitter # PC端显示的分享图标
+    mobile_sites: weibo,qq,qzone # 移动端显示的分享图标
+
+  # Comment
+  # Gitment
+  # Introduction: https://imsun.net/posts/gitment-introduction/
+  comment:
+    type: gitalk # 启用哪种评论系统
+    disqus: xiaoheiah # enter disqus shortname here
+    gitalk: # gitalk. https://gitalk.github.io/
+      owner: xiaoheiAh #必须. GitHub repository 所有者，可以是个人或者组织。
+      admin: xiaoheiAh #必须. GitHub repository 的所有者和合作者 (对这个 repository 有写权限的用户)。
+      repo: xiaoheiAh.github.io #必须. GitHub repository.
+      ClientID: e38fc798c72a7e4e1386 #必须. GitHub Application Client ID.
+      ClientSecret: e151aa3b7b98d3cfaa1f096b88fdd7897e2c8007 #必须. GitHub Application Client Secret.
+    valine: # Valine. https://valine.js.org
+      appid: xGznXBGQpNHamkmh9Jh1rPYn-gzGzoHsz # your leancloud application appid
+      appkey: CWA2W0DYfpzASHBPMdH4eLkQ # your leancloud application appkey
+      notify: true # mail notifier , https://github.com/xCss/Valine/wiki
+      verify: false # Verification code
+      placeholder: enjoy~ # comment box placeholder
+      avatar: mm # gravatar style
+      meta: nick,mail # custom comment header
+      pageSize: 10 # pagination size
+      visitor: false # Article reading statistic https://valine.js.org/visitor.html
+
+  # Donate
+  donate:
+    enable: true
+    # 微信打赏
+    wechatpay:
+      qrcode: donate/wechatpayimg.png
+      title: 微信支付
+    # 支付宝打赏
+    alipay:
+      qrcode: donate/alipayimg.png
+      title: 支付宝
+
+  # PV
+  pv:
+    busuanzi:
+      enable: true # 不蒜子统计
+    leancloud:
+      enable: false # leancloud统计
+      app_id: xGznXBGQpNHamkmh9Jh1rPYn-gzGzoHsz # leancloud <AppID>
+      app_key: CWA2W0DYfpzASHBPMdH4eLkQ # leancloud <AppKey>
+
+  # wordcount
+  postCount:
+    enable: true
+    wordcount: true # 文章字数统计
+    min2read: true # 阅读时长预计
+
+  # config
+  config:
+    skin: theme-black # 主题颜色 theme-black theme-blue theme-green theme-purple
+    layout: main-center # 布局方式 main-left main-center main-right
+    toc: true # 是否开启文章章节目录导航
+    menu_highlight: true # 是否开启当前菜单高亮显示
+    excerpt_link: Read More
+
+  # Sidebar
+  sidebar: none
+
+  # Search
+  search:
+    enable: true # enable search. thanks for https://raw.githubusercontent.com/ppoffice/hexo-theme-icarus/master/source/js/insight.js
+
+  # Sidebar
+  widgets:
+    - board
+    - category
+    - tag
+    - recent_posts
+

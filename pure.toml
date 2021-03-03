@@ -1,0 +1,147 @@
+baseURL = "https://yoursite.example.com/"
+theme = "hugo-theme-pure"
+footnoteReturnLinkContents = "↩"
+title = "My Hugo Site"
+
+[params]
+since = 2017.0
+sidebar = "right"
+widgets = [
+  "board",
+  "category",
+  "tag",
+  "tagcloud",
+  "archive",
+  "recent_posts"
+]
+
+  [params.share]
+  enable = true
+  sites = "weibo,qq,wechat,facebook,twitter"
+  mobile_sites = "weibo,qq,qzone"
+
+  [params.comment]
+  type = "valine"
+
+    [params.comment.youyan]
+    uid = 1783844.0
+
+    [params.comment.livere]
+
+    [params.comment.gitment]
+    lazy = false
+
+    [params.comment.gitalk]
+
+    [params.comment.valine]
+    notify = false
+    verify = false
+    placeholder = "Just go go"
+    avatar = "mm"
+    meta = "nick,mail,link"
+    pageSize = 10.0
+    visitor = false
+
+  [params.donate]
+  enable = true
+
+    [params.donate.wechatpay]
+    qrcode = "images/donate/wechatpayimg.png"
+    title = "微信支付"
+
+    [params.donate.alipay]
+    qrcode = "images/donate/alipayimg.png"
+    title = "支付宝"
+
+  [params.pv]
+
+    [params.pv.busuanzi]
+    enable = true
+
+    [params.pv.leancloud]
+    enable = false
+
+  [params.postCount]
+  enable = true
+  wordcount = true
+  min2read = true
+
+  [params.config]
+  layout = "main-center"
+  toc = true
+  menu_highlight = true
+  thumbnail = true
+  excerpt_link = "Read More"
+
+  [params.profile]
+  enabled = true
+  avatar = "images/avatar.jpg"
+  author = "赵小黑"
+  author_title = "Web Developer & Designer"
+  author_description = "个人简介。"
+  location = "Shanghai, China"
+  follow = "https://github.com/xiaoheiAh"
+  labels = [
+    "前端",
+    "前端开发",
+    "前端重构",
+    "Web前端",
+    "网页重构"
+  ]
+
+    [params.profile.social]
+    link_tooltip = true
+
+      [params.profile.social.links]
+      github = "https://github.com/cofess"
+      weibo = "http://weibo.com/cofess"
+      twitter = "https://twitter.com/iwebued"
+      behance = "https://www.behance.net/cofess"
+      rss = "atom.xml"
+
+    [params.profile.skills]
+    Git = "★★★☆☆"
+    Gulp = "★★★☆☆"
+    Javascript = "★★★☆☆"
+    "HTML+CSS" = "★★★☆☆"
+    Bootstrap = "★★★☆☆"
+    ThinkPHP = "★★★☆☆"
+    "平面设计" = "★★★☆☆"
+
+    [params.profile.links]
+    Github = "https://github.com/cofess"
+    Blog = "http://blog.cofess.com"
+    "微博" = "http://weibo.com/cofess"
+    "花瓣" = "http://huaban.com/cofess"
+    Behance = "https://www.behance.net/cofess"
+
+    [params.profile.works]
+
+      [params.profile.works.name]
+      link = "http://www.example.com"
+      date = 2016.0
+
+    [params.profile.projects]
+    "cofess/gulp-startpro" = "https://github.com/cofess/gulp-startpro"
+    "cofess/hexo-theme-pure" = "https://github.com/cofess/hexo-theme-pure"
+
+[permalinks]
+posts = "/:year/:month/:title/"
+
+[menu]
+
+  [[menu.main]]
+  identifier = "home"
+  name = "Home"
+  title = "主页"
+  url = "/"
+  weight = -1.0
+  icon = "icon-home-fill"
+
+  [[menu.main]]
+  identifier = "archives"
+  name = "Archives"
+  title = "归档"
+  url = "/posts"
+  weight = -110.0
+  icon = "icon-archives-fill"

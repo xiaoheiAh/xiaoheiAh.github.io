@@ -1,0 +1,10 @@
+.DS_Store
+node_modules/*
+public
+resources/*
+hugo
+hugo-theme-pure/*
+
+!themes
+themes/*
+!themes/pure

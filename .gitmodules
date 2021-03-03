@@ -1,0 +1,4 @@
+[submodule "themes/ezhil"]
+	url = https://github.com/xiaoheiAh/ezhil
+	active = true
+	path = themes/ezhil
